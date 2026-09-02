@@ -1,6 +1,6 @@
 # Supported systems and catalog admission
 
-The active canary remains the four manually reviewed systems below. The daily Workflow also stages eligible rows from MobilityData's canonical `systems.csv` as **disabled candidates** when `MOBILITYDATA_CATALOG_MODE=candidates`. Candidate indexing is not a claim of live or worldwide coverage: candidates are not probed, returned by MCP tools, or matched to coordinates until an operator explicitly promotes them.
+The live production canary enables the four manually reviewed systems below. Its September 2, 2026 launch catalog contained 1,524 systems: four enabled reviewed systems and 1,520 disabled candidates. The daily Workflow stages eligible rows from MobilityData's canonical `systems.csv` as **disabled candidates** when `MOBILITYDATA_CATALOG_MODE=candidates`. Candidate indexing is not a claim of live or worldwide coverage: candidates are not probed, returned by MCP tools, or matched to coordinates until an operator explicitly promotes them.
 
 | System ID | System | GBFS | Why included |
 |---|---|---:|---|

@@ -2,10 +2,10 @@
 document_label: PRODUCT REQUIREMENTS DOCUMENT
 title: Open Bikeshare MCP
 subtitle: An open-source MCP server for normalized real-time bikeshare discovery and availability
-status: Release candidate for a four-system production canary; public beta gates remain open
+status: Production canary live with four reviewed systems; private-alpha and public-beta gates remain open
 owner: Kanishq0106@gmail.com
-target: Cloudflare Workers production canary at mcp.openbike.neesh.page, then a gated worldwide public beta
-version: 1.2
+target: Live Cloudflare Workers production canary at mcp.openbike.neesh.page; private alpha, then gated worldwide public beta
+version: 1.3
 last_updated: September 2, 2026
 decision_summary: Build a stateless, read-only MCP service on Cloudflare Workers. Use a per-system Durable Object for coherent live GBFS caching and refresh coalescing, versioned R2/KV catalog data, scheduled Workflows and Queues for provider probes, and Workers-native security and telemetry. Retain a Vercel Functions plus managed Redis fallback only if measured Worker memory or connection limits fail the documented platform-fit gates.
 ---
@@ -16,9 +16,9 @@ Bikeshare availability is published across hundreds of independent systems. Most
 
 Open Bikeshare MCP centralizes that work. An MCP client supplies a coordinate, place-derived coordinate, system ID, station ID, and optional filters. The service resolves relevant GBFS systems, fetches and validates the minimum required feeds, joins static station metadata to near-real-time status, normalizes the result, and returns concise structured data suitable for both model reasoning and direct UI rendering.
 
-**Current release status.** The codebase is complete for a four-system production canary covering New York City, Vancouver, Oslo, and Vienna. The production hostname is reserved but is not considered live until Cloudflare's paid Workers plan is activated and the staging and production smoke gates pass. The catalog pipeline can stage eligible MobilityData rows as disabled candidates, but it does not probe, coordinate-match, or return them until an operator reviews and promotes each system. This release therefore does not claim worldwide coverage or public-beta readiness.
+**Current release status.** The four-system production canary is live at `https://mcp.openbike.neesh.page/mcp` on Cloudflare Workers Paid and has passed staging and production smoke validation. The September 2, 2026 launch catalog contained 1,524 systems: four reviewed systems were enabled and 1,520 were disabled candidates. The catalog/probe pipeline is live and `/status` reported a completed 4/4 launch probe cycle; disabled candidates are not probed, coordinate-matched, or returned until individually reviewed and promoted. This release does not claim worldwide coverage or private-alpha/public-beta readiness.
 
-V1 will run as one Cloudflare Workers project with a stateless Streamable HTTP MCP endpoint. A globally deployed request Worker performs protocol handling, validation, system discovery, and result composition. One SQLite-backed Durable Object per bikeshare system owns fresh feed state, conditional-request metadata, refresh single-flight, and provider circuit state. A scheduled Workflow publishes catalog versions and Queues fan out idempotent system probes. This is one modular TypeScript codebase and one platform project, without Redis or a request-path database.
+V1 runs as one Cloudflare Workers project with a stateless Streamable HTTP MCP endpoint. A globally deployed request Worker performs protocol handling, validation, system discovery, and result composition. One SQLite-backed Durable Object per bikeshare system owns fresh feed state, conditional-request metadata, refresh single-flight, and provider circuit state. A scheduled Workflow publishes catalog versions and Queues fan out idempotent system probes. This is one modular TypeScript codebase and one platform project, without Redis or a request-path database.
 
 The hosting choice is conditional on measured fit. Before private alpha, the implementation must prove that the largest supported feeds remain comfortably below the 128 MB Worker isolate limit and that cold multi-system queries meet the five-second request budget while respecting Cloudflare's six pending outbound-connection limit. If either gate fails after bounded optimization, the approved fallback is Vercel Functions with managed Redis. Vercel AI Gateway is not part of V1 because the service does not invoke language models.
 
@@ -48,12 +48,12 @@ The hosting choice is conditional on measured fit. Before private alpha, the imp
 
 | Area | Current evidence | Remaining release gate |
 |---|---|---|
-| MCP and GBFS core | Five stateless Streamable HTTP tools, GBFS 2.x/3.x normalization, bounded fetches, coherent per-system snapshots, partial failure, and freshness semantics are implemented and locally tested. | Pass the same protocol and tool smoke suite against staging and production. |
-| Active coverage | Four manually reviewed systems are enabled: Citi Bike, Mobi, Oslo Bysykkel, and WienMobil Rad. | Observe all four live in the production canary before expanding. |
-| Catalog expansion | Eligible MobilityData rows can be normalized into an immutable disabled-candidate inventory; authenticated, unsafe, malformed, and duplicate-ID rows fail closed. The September 2, 2026 source audit admitted 1,520 inert candidates from 1,535 rows alongside four reviewed systems. | Review discovery and subfeed hosts, terms, fixtures, capabilities, and geographic coverage per provider before promotion. |
-| Cloudflare resources | Isolated staging/production KV, R2, Queues, dead-letter queues, Workflow configuration, WAF rate rule, custom-domain configuration, and billing notification exist. | Activate Workers Paid, deploy both environments, run rollback rehearsal, and verify DNS/TLS and telemetry. |
-| Platform fit | The deterministic 6,000-station local workerd benchmark stays within the 4 MiB snapshot bound, coalesces 1/10/100 cold misses to one refresh, and respects four-way provider concurrency. | Capture deployed Worker CPU and isolate-memory evidence; local process CPU/RSS is not a substitute. |
-| Release designation | Four-system production canary, before private alpha. | Private alpha requires the Phase 1 system range and client evidence; public beta additionally requires at least 90% reachable enabled coverage, the availability observation window, security review completion, and all Phase 2 exit criteria. |
+| MCP and GBFS core | Five stateless Streamable HTTP tools, GBFS 2.x/3.x normalization, bounded fetches, coherent per-system snapshots, partial failure, and freshness semantics are implemented. Modern-auto and legacy-2025 client smokes passed all five tools in staging and production. | Expand the independent-client and live-city evidence matrix before private alpha. |
+| Active coverage | Four manually reviewed systems are enabled: Citi Bike, Mobi, Oslo Bysykkel, and WienMobil Rad. The launch probe cycle completed 4/4 with three healthy, one degraded, and zero unavailable. | Observe stability over time before expanding the canary. |
+| Catalog expansion | Production published 1,524 systems from the September 2, 2026 source audit: four enabled reviewed systems and 1,520 inert candidates. Authenticated, unsafe, malformed, and duplicate-ID rows fail closed. | Review discovery and subfeed hosts, terms, fixtures, capabilities, and geographic coverage per provider before promotion. |
+| Cloudflare resources | Workers Paid is active. Isolated staging/production KV, R2, Queues, dead-letter queues, Workflows, Durable Objects, metrics, rate limits, WAF, and the custom domain are deployed; DNS/TLS and the launch probe pipeline passed live validation. | Complete the rollback rehearsal and capture sustained cost and telemetry evidence. |
+| Platform fit | The deterministic 6,000-station local workerd benchmark stays within the 4 MiB snapshot bound and coalesces 1/10/100 cold misses. The launch machine measured production p95 of 69.7 ms for health, 26.9 ms for readiness, and 581 ms for warm `find_systems`. | Capture deployed Worker CPU, isolate-memory, multi-region, and cold-path evidence; local or single-origin measurements are not substitutes. |
+| Release designation | Live four-system production canary, before private alpha. | Private alpha requires the Phase 1 system range and client evidence; public beta additionally requires at least 90% reachable enabled coverage, the availability observation window, security review completion, and all Phase 2 exit criteria. |
 
 # 2. Problem and Opportunity
 
@@ -263,7 +263,7 @@ Tool-level failure is reserved for invalid requests or complete inability to ans
 - Treat `station_information` as relatively static and `station_status` as near-real-time. Join only within the same system namespace.
 - Map v2 `free_bike_status` and v3 `vehicle_status` into a common dockless-vehicle model, but keep individual vehicle locations out of default tools for privacy and payload control.
 - Ignore unknown extension fields by default, record them in validation telemetry, and promote them only through reviewed adapters.
-- Supported beta inputs are maintained GBFS 2.x and 3.x feeds. Release-candidate features are capability-gated and must not destabilize the stable schema.
+- Current supported inputs are maintained GBFS 2.x and 3.x feeds. Capability-gated additions must not destabilize the stable schema.
 
 ## 6.3 Availability confidence
 
@@ -414,10 +414,10 @@ wrangler.jsonc                  bindings, routes, limits, queues and schedules
 
 ## 8.8 Hosting and deployment model
 
-- Deploy the request handler globally on Workers Paid with automatic scaling; do not model it as one region with horizontal replicas.
-- Use the Worker Custom Domain `mcp.openbike.neesh.page`; Cloudflare creates the DNS record and certificate.
+- The request handler is deployed globally on Workers Paid with automatic scaling; do not model it as one region with horizontal replicas.
+- The production Worker uses `https://mcp.openbike.neesh.page`; Cloudflare manages its DNS record and certificate.
 - Keep `/mcp`, `/healthz`, `/readyz`, and `/status` on the same Worker project.
-- Use preview/staging and production environments with separate R2, KV, Queue, Durable Object namespace, Analytics Engine, and secrets/bindings where required.
+- Staging and production use separate R2, KV, Queue, Durable Object namespace, Analytics Engine, and rate-limit bindings.
 - The public GBFS path requires no provider secrets. Deployment/API tokens and telemetry credentials are platform secrets, never normal environment variables committed to the repository.
 - Use version metadata and gradual deployment/rollback. A code rollback must not invalidate persisted Durable Object data; schema migrations require forward/backward compatibility.
 - Start with default nearest-ingress Worker execution. Do not enable Smart Placement until traces show it improves upstream latency.
@@ -438,7 +438,7 @@ wrangler.jsonc                  bindings, routes, limits, queues and schedules
 
 Workers Paid currently has a five-dollar monthly account minimum including 10 million Worker requests and 30 million CPU-milliseconds, with published request and CPU overages and no Worker data-transfer charge. Durable Objects, KV, R2, Queues, Workflows, logs/traces, and any Gateway or external observability plan have separate usage or plan economics. A slow upstream fetch can increase Durable Object active duration, so the beta replay must measure total platform usage rather than extrapolate from headline request price.
 
-The service has a maintainer-approved operating ceiling of approximately USD 25 per month. The expected low-scale canary posture is the Workers Paid minimum plus usage-based platform primitives. A USD 10 Cloudflare budget notification is already configured, which is intentionally stricter than the ceiling but is not a hard cap. Configure low queue concurrency, bounded feed fan-out, and sampled production telemetry before launch. At a projected USD 20 monthly run rate, pause background probes and investigate; before projected spend can exceed USD 25, disable nonessential scheduled work or the production route until the cause is understood.
+The service has a maintainer-approved operating ceiling of approximately USD 25 per month. The expected low-scale canary posture is the Workers Paid minimum plus usage-based platform primitives. A USD 10 Cloudflare budget notification is already configured, which is intentionally stricter than the ceiling but is not a hard cap. Production uses low queue concurrency, bounded feed fan-out, and sampled telemetry. At a projected USD 20 monthly run rate, pause background probes and investigate; before projected spend can exceed USD 25, disable nonessential scheduled work or the production route until the cause is understood.
 
 The approved fallback has a higher published Vercel Pro baseline and adds a managed Redis-compatible service plus origin-transfer economics. Do not choose either platform from base subscription price alone; price the measured prototype replay against current official calculators before public beta.
 
@@ -541,7 +541,7 @@ The benchmark must measure:
 - Upstream request count during 1, 10, and 100 simultaneous cache misses for the same system.
 - Failure behavior when a response exceeds compressed bytes, decompressed bytes, record count, or total deadline.
 
-The Cloudflare deployment passes when peak memory is below 80 MB, no application path waits on more than the configured four concurrent operations, warm p95 is below two seconds, cold p95 is below five seconds for the supported fixture set, and concurrent misses collapse to one refresh per feed.
+The pre-private-alpha platform-fit gate passes when peak memory is below 80 MB, no application path waits on more than the configured four concurrent operations, warm p95 is below two seconds, cold p95 is below five seconds for the supported fixture set, and concurrent misses collapse to one refresh per feed.
 
 If it fails, first reduce buffering, duplicate object graphs, feed concurrency, candidate systems, and response size. If the measured workload still cannot pass without violating product requirements, execute the documented Vercel Functions plus managed Redis fallback rather than hiding the constraint.
 
@@ -556,19 +556,14 @@ Maintain a versioned set of natural-language scenarios with expected tool select
 | 0 - Local prototype | Citi Bike plus two to four diverse systems; local and remote MCP; one SystemFeed object. | Tool contracts stable; correct station join, freshness, and one-client flow. |
 | 0.5 - Platform-fit spike | Recorded largest-feed suite, concurrency benchmark, Workers staging bindings, queue/workflow rehearsal. | Memory below 80 MB; pending-operation budgets enforced; warm/cold latency gates met; no unbounded buffering. |
 | 1 - Private alpha | 20-50 systems across GBFS versions and regions; custom staging domain. | Golden suite; SSRF controls; dashboards; two-client MCP interop; p95 target met. |
-| 2 - Public beta | Catalog-driven worldwide discovery, production custom domain, public docs, WAF/rate limits, status page. | At least 90% reachable coverage; 99.5% service availability; security review; queue/DLQ runbook; rollback tested. |
+| 2 - Public beta | Expand the live production canary to catalog-driven worldwide discovery while retaining the custom domain, public docs, WAF/rate limits, and status page. | At least 90% reachable coverage; 99.5% service availability; security review; queue/DLQ runbook; rollback tested. |
 | 3 - Stable V1 | Compatibility policy, SLOs, maintained provider override process. | No P0/P1 correctness defects; measured one-call success at least 80%; sustained Worker fit headroom. |
 
-## 13.1 Suggested implementation sequence
+## 13.1 Delivery status and next work
 
-1. Freeze schemas for System, Station, Availability, Freshness, Warning, and the five MCP tools.
-2. Scaffold the Workers project, stateless `/mcp` handler, custom health routes, and typed platform interfaces.
-3. Implement GBFS discovery plus v2/v3 station adapters against recorded fixtures.
-4. Implement `SystemFeed` Durable Object persistence, in-flight refresh coalescing, conditional requests, and circuit state.
-5. Ship `get_nearby_availability` for explicit system IDs, then add R2/KV catalog publication and geographic discovery.
-6. Add scheduled Workflow, Queue probes, materialized `/status`, telemetry, security controls, and catalog rollback.
-7. Run the platform-fit benchmark and resolve the Cloudflare/Vercel go/no-go gate before expanding coverage.
-8. Run multi-city evals, publish docs and examples, and open public beta.
+1. Completed for the production canary: schemas, Worker/MCP routes, GBFS adapters, `SystemFeed` Durable Objects, R2/KV catalog and geographic discovery, scheduled Workflow/Queues, materialized status, security controls, and staging/production launch.
+2. Before private alpha, capture deployed CPU and isolate-memory evidence, rehearse rollback, expand the reviewed system set, and broaden independent-client coverage.
+3. Before public beta, run multi-city evals, satisfy the coverage and availability observation gates, complete security review, and publish the promotion evidence.
 
 # 14. Acceptance Criteria
 
@@ -595,7 +590,7 @@ Maintain a versioned set of natural-language scenarios with expected tool select
 
 | Question | Decision for V1 |
 |---|---|
-| Where is the public service hosted? | Cloudflare Workers Paid on a custom domain, subject to the documented platform-fit benchmark. |
+| Where is the public service hosted? | Cloudflare Workers Paid at `https://mcp.openbike.neesh.page`. Expansion beyond the four-system canary remains subject to the documented platform-fit benchmark. |
 | What is the fallback if Workers does not fit? | Vercel Functions plus a managed Redis-compatible cache. Do not run a hybrid V1; switch only through the explicit go/no-go decision. |
 | Does Vercel AI Gateway help this service? | No. It routes model inference and does not host or coordinate this deterministic MCP data service. Reconsider only if a future tool calls an LLM. |
 | Does the MCP server need protocol sessions? | No for V1. Use the current stateless Streamable HTTP handler and store no MCP protocol session state. |
@@ -685,7 +680,7 @@ Maintain a versioned set of natural-language scenarios with expected tool select
 
 # Appendix C - Sources and Standards
 
-This PRD was reviewed against the official sources below on September 2, 2026. Platform limits, prices, beta status, and exact package versions can change; implementation planning must re-check these pages before deployment.
+This PRD was reviewed against the official sources below on September 2, 2026. Platform limits, prices, beta status, and exact package versions can change; implementation planning must re-check these pages before future deployments and before public-beta promotion.
 
 - General Bikeshare Feed Specification (MobilityData): https://github.com/MobilityData/gbfs/blob/master/gbfs.md
 - GBFS systems catalog (MobilityData): https://github.com/MobilityData/gbfs/blob/master/systems.csv

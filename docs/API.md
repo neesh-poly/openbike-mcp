@@ -1,6 +1,6 @@
 # MCP API
 
-The planned production Streamable HTTP endpoint is `https://mcp.openbike.neesh.page/mcp`. It becomes an advertised public endpoint only after deployment and smoke validation. It is stateless: clients initialize, list tools, and call tools normally, but the server does not retain protocol sessions between requests.
+The live production Streamable HTTP endpoint is `https://mcp.openbike.neesh.page/mcp`. It is stateless: clients initialize, list tools, and call tools normally, but the server does not retain protocol sessions between requests.
 
 Send one JSON-RPC request per HTTP POST. Top-level JSON-RPC batches are intentionally rejected so one rate-limit unit cannot fan out into many provider operations.
 

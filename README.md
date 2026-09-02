@@ -4,12 +4,12 @@
 
 An open-source, read-only Model Context Protocol server for live bikeshare discovery and station availability. It normalizes heterogeneous General Bikeshare Feed Specification (GBFS) feeds so agents can answer questions such as “Can I return a bike near here?” with distance, operational state, and explicit freshness.
 
-The implementation is release-candidate complete for a four-system production canary. The Cloudflare service is not live until the paid Workers plan is activated and the staging and production smoke gates pass. Worldwide public beta remains a later milestone: MobilityData catalog rows are indexed only as disabled candidates until each provider passes the documented admission gate.
+The four-system production canary is live on Cloudflare and has passed staging and production smoke validation. Its September 2, 2026 launch catalog contained 1,524 systems: four manually reviewed enabled systems and 1,520 disabled candidates. Worldwide public beta remains a later milestone; disabled candidates are not probed, coordinate-matched, or returned until individually reviewed and promoted.
 
-- Planned MCP endpoint: `https://mcp.openbike.neesh.page/mcp`
-- Planned service health: `https://mcp.openbike.neesh.page/healthz`
-- Planned readiness: `https://mcp.openbike.neesh.page/readyz`
-- Planned provider summary: `https://mcp.openbike.neesh.page/status`
+- MCP endpoint: `https://mcp.openbike.neesh.page/mcp`
+- Service health: `https://mcp.openbike.neesh.page/healthz`
+- Readiness: `https://mcp.openbike.neesh.page/readyz`
+- Catalog and probe-cycle status: `https://mcp.openbike.neesh.page/status`
 
 During the initial canary, the endpoint is unauthenticated, rate limited, and intentionally accepts no arbitrary feed URLs.
 
@@ -54,16 +54,16 @@ pnpm deploy:staging
 pnpm deploy:production
 ```
 
-The first deployment requires an authenticated Wrangler session or a narrowly scoped Cloudflare API token. Do not commit deployment tokens. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), [the rollback runbook](docs/runbooks/rollback.md), and [cost controls](docs/operations/cost-controls.md).
+Deployments require an authenticated Wrangler session or a narrowly scoped Cloudflare API token. Do not commit deployment tokens. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), [the rollback runbook](docs/runbooks/rollback.md), and [cost controls](docs/operations/cost-controls.md).
 
 ## Release scope
 
-The first production canary enables four manually reviewed systems: Citi Bike (New York), Mobi (Vancouver), Oslo Bysykkel, and WienMobil Rad (Vienna). The catalog Workflow may stage additional MobilityData rows as disabled candidates, but disabled systems are never probed, matched to coordinates, or returned by MCP tools. See [docs/SUPPORTED_SYSTEMS.md](docs/SUPPORTED_SYSTEMS.md) for the promotion checklist and the remaining worldwide-coverage gates.
+The live production canary enables four manually reviewed systems: Citi Bike (New York), Mobi (Vancouver), Oslo Bysykkel, and WienMobil Rad (Vienna). The September 2, 2026 launch catalog contained 1,524 systems - four enabled reviewed systems and 1,520 disabled candidates - and scheduled Workflow/Queue probes publish materialized operational state at `/status`; disabled systems are never probed, coordinate-matched, or returned by MCP tools. See [docs/SUPPORTED_SYSTEMS.md](docs/SUPPORTED_SYSTEMS.md) for the promotion checklist and the remaining worldwide-coverage gates.
 
 ## Product requirements
 
 - [Canonical Markdown PRD](docs/Open_Bikeshare_MCP_PRD.md)
-- [Generated review DOCX](docs/Open_Bikeshare_MCP_PRD_Cloudflare_v1.2.docx)
+- [Generated review DOCX](docs/Open_Bikeshare_MCP_PRD_Cloudflare_v1.3.docx)
 - [Cloudflare-first ADR](docs/decisions/0001-cloudflare-first-hosting.md)
 - [Original DOCX reference](docs/reference/Open_Bikeshare_MCP_PRD_original.docx)
 

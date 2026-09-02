@@ -14,7 +14,7 @@ from docx import Document
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = PROJECT_ROOT / "docs" / "Open_Bikeshare_MCP_PRD.md"
 DEFAULT_DOCUMENT = (
-    PROJECT_ROOT / "docs" / "Open_Bikeshare_MCP_PRD_Cloudflare_v1.2.docx"
+    PROJECT_ROOT / "docs" / "Open_Bikeshare_MCP_PRD_Cloudflare_v1.3.docx"
 )
 SOURCE_HASH_PATTERN = re.compile(r"Source SHA-256: ([0-9a-f]{64})")
 

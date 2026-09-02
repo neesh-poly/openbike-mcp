@@ -35,7 +35,7 @@ DEFAULT_TEMPLATE = (
 DEFAULT_OUTPUT = (
     PROJECT_ROOT
     / "docs"
-    / "Open_Bikeshare_MCP_PRD_Cloudflare_v1.2.docx"
+    / "Open_Bikeshare_MCP_PRD_Cloudflare_v1.3.docx"
 )
 
 NAVY = "14233B"
