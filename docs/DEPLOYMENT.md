@@ -1,6 +1,6 @@
 # Deployment
 
-The repository is release-candidate complete for a four-system canary, but the production URL must not be advertised as live until every release step below succeeds. Worldwide catalog candidates remain disabled unless individually promoted through the reviewed override path.
+The four-system production canary is live at `https://mcp.openbike.neesh.page/mcp` and has passed deployment and smoke validation. The September 2, 2026 launch catalog contained 1,524 systems: four reviewed systems were enabled and 1,520 candidates remained disabled unless individually promoted through the reviewed override path.
 
 ## Environments
 
@@ -12,11 +12,21 @@ The repository is release-candidate complete for a four-system canary, but the p
 2. Deploy staging with `pnpm deploy:staging`.
 3. Seed or publish the catalog and run the live provider canary.
 4. Exercise initialize, tools/list, and all five tools using two independent MCP clients.
-5. Record the platform-fit report, including bundle size, warm/cold latency, connection ceiling, refresh coalescing, and peak memory evidence.
+5. Record the release-fit evidence available at deployment time, including bundle size, warm/cold latency, connection ceilings, and refresh coalescing. Before private-alpha promotion, separately complete the deployed CPU and isolate-memory profiling required by the platform-fit gate.
 6. Deploy production with `pnpm deploy:production` and rerun the health and protocol smoke suite.
 7. Watch Workers Logs, traces, queue failures, and cost indicators during the initial rollout.
 
-After a successful production smoke run, replace "planned" endpoint language in the README and API documentation with the observed deployment status, commit that evidence, and create the release tag. Do not label the release a worldwide public beta until the PRD's Phase 2 coverage and availability gates are measured.
+The initial production deployment and smoke validation are complete. For each subsequent release, rerun health, readiness, protocol, all-tool, and catalog/probe-status checks before tagging. Do not label the release a worldwide public beta until the PRD's Phase 2 coverage and availability gates are measured.
+
+## Initial production launch evidence
+
+The September 2, 2026 UTC launch deployed protected-main commit `ed8a9f3` as Worker version `3493edd1-111d-4eb2-9d62-4aac43fb9e92`.
+
+- Catalog Workflow instance `cf_141b6e038d376d89f65382ed2c96d257a3f89fbb8a98ef5296a110585c006b84` validated 1,535 source rows and published 1,524 systems: four enabled reviewed systems and 1,520 disabled candidates.
+- The materialized launch probe cycle completed 4/4 systems with three healthy, one degraded, and zero unavailable.
+- Modern-auto and legacy-2025 MCP client smokes passed initialize, `tools/list`, and all five tools.
+- From the launch machine, 10-sample p95 wall times were 69.7 ms for `/healthz`, 26.9 ms for `/readyz`, and 581 ms for warm `find_systems`. These client-side samples are deployment evidence, not an availability SLO.
+- The custom hostname presented a valid publicly trusted certificate. The production `workers.dev` hostname and preview URLs returned no Worker route and remain disabled.
 
 Deployment credentials belong in Wrangler OAuth storage or CI secrets. The repository contains no provider secrets because the seed feeds are public.
 

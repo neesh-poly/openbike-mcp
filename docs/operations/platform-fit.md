@@ -34,6 +34,10 @@ observable, but performs no live network I/O. The report includes per-request
 wall latency and whole-harness user/system CPU plus peak resident memory when
 `/usr/bin/time` is available on macOS or Linux.
 
+## Initial deployed canary evidence
+
+The September 2, 2026 production launch uploaded a 249.74 KiB gzip bundle with a reported 78 ms Worker startup time. The public production smoke passed both supported MCP client modes and all five tools. From the launch machine, 10-sample p95 wall times were 69.7 ms for `/healthz`, 26.9 ms for `/readyz`, and 581 ms for warm `find_systems`. These single-origin client measurements validate the launched request path but are not an availability SLO or a substitute for isolate CPU and memory profiling.
+
 ## What the local report does not prove
 
 Whole-process CPU and RSS include Node, pnpm, Vitest, Vite, and `workerd`. They
@@ -42,8 +46,8 @@ Cloudflare isolate, and are deliberately not compared with Cloudflare's runtime
 limits. The synthetic amplified fixture also does not prove behavior for the
 largest feed in the live provider catalog.
 
-Complete the deployment gate with production-like requests in staging and
-record:
+Complete the pre-private-alpha platform-fit gate with deployed staging and
+production evidence and record:
 
 1. per-invocation CPU and wall time from Workers traces or invocation logs;
 2. a DevTools heap profile while replaying the largest reviewed provider
