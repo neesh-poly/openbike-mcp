@@ -339,6 +339,43 @@ describe("OpenBikeMcpService", () => {
     ).rejects.toMatchObject({ code: "STALE_DATA", retryable: true });
   });
 
+  it("marks warning truncation when more than one hundred unique warnings exist", async () => {
+    const system = catalogSystem("warning-cap-system");
+    const item = station(system.system_id, "warning-cap-station", 40.7001);
+    const current = snapshot(system, [item], [
+      status(system.system_id, item.station_id, 4),
+    ]);
+    current.warnings = Array.from({ length: 101 }, (_, index) => ({
+      code: "AMBIGUOUS_CAPACITY" as const,
+      message: "The provider supplied an ambiguous station capacity.",
+      system_id: system.system_id,
+      station_id: `warning-${index}`,
+      retryable: false,
+    }));
+    const feed: SystemFeedClient = {
+      getAvailability: vi.fn(async () => current),
+      getHealth: vi.fn(async () => health(system)),
+    };
+
+    const output = await service([system], () => feed).getNearbyAvailability({
+      latitude: 40.7,
+      longitude: -74,
+      mode: "take",
+      radius_meters: 800,
+      limit: 5,
+      minimum_available: 1,
+      include_unavailable: false,
+      max_staleness_seconds: 300,
+    });
+
+    expect(output.warnings).toHaveLength(100);
+    expect(output.warnings.at(-1)).toEqual({
+      code: "WARNINGS_TRUNCATED",
+      message: "Additional warnings were omitted from this response.",
+      retryable: false,
+    });
+  });
+
   it("uses station-status envelope metadata instead of the discovery timestamp", async () => {
     const system = catalogSystem("per-feed-time-system");
     const item = station(system.system_id, "per-feed-time-station", 40.7001);
