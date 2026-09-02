@@ -1,0 +1,50 @@
+{
+  "name": "openbike-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An open-source, read-only MCP server for normalized live GBFS bikeshare availability.",
+  "license": "MIT",
+  "homepage": "https://github.com/neesh-poly/openbike-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neesh-poly/openbike-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/neesh-poly/openbike-mcp/issues"
+  },
+  "type": "module",
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "build": "wrangler deploy --dry-run --env staging --outdir dist",
+    "build:production": "wrangler deploy --dry-run --env production --outdir dist-production",
+    "cf-typegen": "wrangler types --env staging",
+    "check": "pnpm cf-typegen && tsc --noEmit",
+    "dev": "wrangler dev --env staging",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "benchmark:platform": "tsx scripts/platform-fit-fixture.ts",
+    "smoke:mcp": "tsx scripts/mcp-smoke.ts",
+    "smoke:platform": "tsx scripts/platform-fit.ts",
+    "smoke:protocol": "tsx scripts/raw-protocol-smoke.ts",
+    "test": "vitest run --config vitest.config.ts && vitest run --config vitest.worker.config.ts --passWithNoTests",
+    "test:worker": "vitest run --config vitest.worker.config.ts",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
+    "agents": "0.22.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "@modelcontextprotocol/client": "2.0.0",
+    "@types/node": "^24.3.0",
+    "tsx": "4.23.13",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0",
+    "wrangler": "4.128.0"
+  }
+}

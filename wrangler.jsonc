@@ -1,0 +1,202 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "openbike-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-02",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "exports": {
+    "SystemFeed": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "limits": {
+    "cpu_ms": 20000,
+    "subrequests": 100
+  },
+  "env": {
+    "staging": {
+      "name": "openbike-mcp-staging",
+      "workers_dev": true,
+      "preview_urls": true,
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "PUBLIC_BASE_URL": "https://openbike-mcp-staging.ilios.workers.dev",
+        "CATALOG_SOURCE_URL": "https://raw.githubusercontent.com/MobilityData/gbfs/master/systems.csv",
+        "MOBILITYDATA_CATALOG_MODE": "candidates",
+        "CONTACT_EMAIL": "Kanishq0106@gmail.com",
+        "PROBE_DLQ_QUEUE_NAME": "openbike-mcp-probes-dlq-staging",
+        "MAX_CANDIDATE_SYSTEMS": "4",
+        "MAX_FEED_BYTES": "4194304",
+        "MAX_MCP_RESPONSE_BYTES": "1048576"
+      },
+      "durable_objects": {
+        "bindings": [
+          { "name": "SYSTEM_FEEDS", "class_name": "SystemFeed" }
+        ]
+      },
+      "kv_namespaces": [
+        { "binding": "CATALOG_KV", "id": "cdb803fe8fea453e99aa151f54738b36" }
+      ],
+      "r2_buckets": [
+        { "binding": "CATALOG_R2", "bucket_name": "openbike-mcp-catalog-staging" }
+      ],
+      "queues": {
+        "producers": [
+          { "binding": "PROBE_QUEUE", "queue": "openbike-mcp-probes-staging" },
+          { "binding": "PROBE_DLQ", "queue": "openbike-mcp-probes-dlq-staging" }
+        ],
+        "consumers": [
+          {
+            "queue": "openbike-mcp-probes-staging",
+            "max_batch_size": 5,
+            "max_batch_timeout": 5,
+            "max_retries": 4,
+            "retry_delay": 60,
+            "dead_letter_queue": "openbike-mcp-probes-dlq-staging",
+            "max_concurrency": 2
+          },
+          {
+            "queue": "openbike-mcp-probes-dlq-staging",
+            "max_batch_size": 5,
+            "max_batch_timeout": 5,
+            "max_retries": 4,
+            "retry_delay": 60,
+            "max_concurrency": 1
+          }
+        ]
+      },
+      "workflows": [
+        {
+          "binding": "CATALOG_REFRESH",
+          "name": "openbike-mcp-catalog-refresh-staging",
+          "class_name": "CatalogRefreshWorkflow",
+          "schedules": ["0 4 * * *"],
+          "concurrency": { "limit": 1 },
+          "default_retention": {
+            "success_retention": "3 days",
+            "error_retention": "14 days"
+          }
+        }
+      ],
+      "analytics_engine_datasets": [
+        { "binding": "METRICS", "dataset": "openbike_mcp_staging" }
+      ],
+      "ratelimits": [
+        {
+          "name": "EDGE_RATE_LIMITER",
+          "namespace_id": "1001",
+          "simple": { "limit": 60, "period": 60 }
+        }
+      ],
+      "observability": {
+        "enabled": true,
+        "redact_query_string": true,
+        "logs": {
+          "enabled": true,
+          "invocation_logs": true,
+          "head_sampling_rate": 1
+        },
+        "traces": {
+          "enabled": true,
+          "head_sampling_rate": 1
+        }
+      }
+    },
+    "production": {
+      "name": "openbike-mcp-production",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [
+        {
+          "pattern": "mcp.openbike.neesh.page",
+          "custom_domain": true,
+          "previews_enabled": false
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "production",
+        "PUBLIC_BASE_URL": "https://mcp.openbike.neesh.page",
+        "CATALOG_SOURCE_URL": "https://raw.githubusercontent.com/MobilityData/gbfs/master/systems.csv",
+        "MOBILITYDATA_CATALOG_MODE": "candidates",
+        "CONTACT_EMAIL": "Kanishq0106@gmail.com",
+        "PROBE_DLQ_QUEUE_NAME": "openbike-mcp-probes-dlq-production",
+        "MAX_CANDIDATE_SYSTEMS": "4",
+        "MAX_FEED_BYTES": "4194304",
+        "MAX_MCP_RESPONSE_BYTES": "1048576"
+      },
+      "durable_objects": {
+        "bindings": [
+          { "name": "SYSTEM_FEEDS", "class_name": "SystemFeed" }
+        ]
+      },
+      "kv_namespaces": [
+        { "binding": "CATALOG_KV", "id": "7e32c1f305e74e3e85dc3cbb8c7dae78" }
+      ],
+      "r2_buckets": [
+        { "binding": "CATALOG_R2", "bucket_name": "openbike-mcp-catalog-production" }
+      ],
+      "queues": {
+        "producers": [
+          { "binding": "PROBE_QUEUE", "queue": "openbike-mcp-probes-production" },
+          { "binding": "PROBE_DLQ", "queue": "openbike-mcp-probes-dlq-production" }
+        ],
+        "consumers": [
+          {
+            "queue": "openbike-mcp-probes-production",
+            "max_batch_size": 5,
+            "max_batch_timeout": 5,
+            "max_retries": 4,
+            "retry_delay": 60,
+            "dead_letter_queue": "openbike-mcp-probes-dlq-production",
+            "max_concurrency": 2
+          },
+          {
+            "queue": "openbike-mcp-probes-dlq-production",
+            "max_batch_size": 5,
+            "max_batch_timeout": 5,
+            "max_retries": 4,
+            "retry_delay": 60,
+            "max_concurrency": 1
+          }
+        ]
+      },
+      "workflows": [
+        {
+          "binding": "CATALOG_REFRESH",
+          "name": "openbike-mcp-catalog-refresh-production",
+          "class_name": "CatalogRefreshWorkflow",
+          "schedules": ["0 4 * * *"],
+          "concurrency": { "limit": 1 },
+          "default_retention": {
+            "success_retention": "3 days",
+            "error_retention": "14 days"
+          }
+        }
+      ],
+      "analytics_engine_datasets": [
+        { "binding": "METRICS", "dataset": "openbike_mcp_production" }
+      ],
+      "ratelimits": [
+        {
+          "name": "EDGE_RATE_LIMITER",
+          "namespace_id": "1002",
+          "simple": { "limit": 60, "period": 60 }
+        }
+      ],
+      "observability": {
+        "enabled": true,
+        "redact_query_string": true,
+        "logs": {
+          "enabled": true,
+          "invocation_logs": true,
+          "head_sampling_rate": 0.25
+        },
+        "traces": {
+          "enabled": true,
+          "head_sampling_rate": 0.1
+        }
+      }
+    }
+  }
+}
