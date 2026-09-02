@@ -152,10 +152,16 @@ export const fetchCatalogSource = async (
 ): Promise<CatalogFetchResult> => {
   const url = validateCatalogSourceUrl(sourceUrl);
   const response = await fetch(url, {
-    redirect: "error",
+    // Workerd currently rejects `redirect: "error"` before issuing the
+    // request. Keep redirect handling explicit so an allowlisted source
+    // cannot move the catalog fetch to an unreviewed destination.
+    redirect: "manual",
     signal: AbortSignal.timeout(15_000),
     headers: { accept: "text/csv" },
   });
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error("Catalog source redirected unexpectedly");
+  }
   if (!response.ok) {
     throw new Error(`Catalog source returned HTTP ${response.status}`);
   }

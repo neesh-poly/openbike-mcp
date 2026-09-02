@@ -8,6 +8,7 @@ import {
 } from "../../src/catalog";
 import {
   buildCatalogCandidate,
+  fetchCatalogSource,
   probeMessage,
   reconcileCatalogProbeCycle,
   validateMobilityDataRows,
@@ -30,6 +31,26 @@ const sourceRows: MobilityDataSystemRow[] = BUNDLED_CATALOG.systems.map(
 );
 
 describe("catalog refresh workflow helpers", () => {
+  it("rejects catalog redirects without following them", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, {
+        status: 302,
+        headers: { location: "https://unreviewed.example/systems.csv" },
+      }),
+    );
+
+    await expect(
+      fetchCatalogSource(
+        "https://raw.githubusercontent.com/MobilityData/gbfs/master/systems.csv",
+      ),
+    ).rejects.toThrow("Catalog source redirected unexpectedly");
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(URL),
+      expect.objectContaining({ redirect: "manual" }),
+    );
+    fetchMock.mockRestore();
+  });
+
   it("builds a deterministic reviewed candidate without onboarding URLs", () => {
     const timestamp = new Date("2026-09-02T04:00:00.000Z");
     const candidate = buildCatalogCandidate(

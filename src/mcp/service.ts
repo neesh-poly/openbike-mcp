@@ -223,6 +223,7 @@ const failureDetails = (
 const deduplicateWarnings = (warnings: readonly Warning[]): Warning[] => {
   const seen = new Set<string>();
   const output: Warning[] = [];
+  let truncated = false;
   for (const warning of warnings) {
     const key = [
       warning.code,
@@ -232,8 +233,21 @@ const deduplicateWarnings = (warnings: readonly Warning[]): Warning[] => {
     ].join("\u0000");
     if (seen.has(key)) continue;
     seen.add(key);
-    if (output.length === MAX_WARNINGS) break;
+    if (output.length === MAX_WARNINGS) {
+      truncated = true;
+      break;
+    }
     output.push(warning);
+  }
+  if (
+    truncated &&
+    !output.some((warning) => warning.code === "WARNINGS_TRUNCATED")
+  ) {
+    output[MAX_WARNINGS - 1] = {
+      code: "WARNINGS_TRUNCATED",
+      message: "Additional warnings were omitted from this response.",
+      retryable: false,
+    };
   }
   return output;
 };

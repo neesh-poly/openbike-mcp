@@ -72,7 +72,6 @@
           "name": "openbike-mcp-catalog-refresh-staging",
           "class_name": "CatalogRefreshWorkflow",
           "schedules": ["0 4 * * *"],
-          "concurrency": { "limit": 1 },
           "default_retention": {
             "success_retention": "3 days",
             "error_retention": "14 days"
@@ -167,7 +166,6 @@
           "name": "openbike-mcp-catalog-refresh-production",
           "class_name": "CatalogRefreshWorkflow",
           "schedules": ["0 4 * * *"],
-          "concurrency": { "limit": 1 },
           "default_retention": {
             "success_retention": "3 days",
             "error_retention": "14 days"
