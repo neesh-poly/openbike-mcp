@@ -25,6 +25,12 @@ During the initial canary, the endpoint is unauthenticated, rate limited, and in
 
 See [docs/API.md](docs/API.md) for inputs, semantics, errors, and example MCP configuration.
 
+## Website map feed
+
+`GET /map-docks/{systemId}/snapshot` returns version 2 station tuples: `[id, longitude, latitude, openSpaces, observedUnixSeconds]`. Zero means full or closed; null means unknown. Original station/provider/fetch clocks bound the observation time and never become newer merely because a client fetched again. Empty or unavailable inventories return an error rather than an all-full city. The legacy `/map-docks/{systemId}` contract remains available.
+
+`GET /map-docks/{systemId}/events` streams `snapshot` events when the shared observation changes, with ten-second heartbeat/check intervals. Provider requests remain coalesced in the existing system Durable Object and respect its feed TTL. Connections end after two minutes and EventSource reconnects; disconnects cancel timers and buffering is bounded. The website subscribes only after one city remains visible for three seconds, closes the stream when switching/hiding the page, and distinguishes delayed readings from confirmed full docks. Neither route changes the MCP tools' freshness contract.
+
 ## Architecture
 
 The service runs on Cloudflare Workers using the current stateless Streamable HTTP MCP handler. One SQLite-backed `SystemFeed` Durable Object per system owns coherent live snapshots, conditional-request metadata, refresh single-flight, and circuit state. Immutable catalog and status versions live in R2, with only current pointers and reviewed overrides in KV. A scheduled Workflow publishes catalog versions and Queue consumers run bounded, idempotent probes with a dead-letter queue.

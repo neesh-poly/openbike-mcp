@@ -2,6 +2,7 @@ import { BUNDLED_CATALOG, getSystemFeedStub, loadCatalog } from "../catalog";
 import type { SystemFeedAvailabilityResult } from "../durable/types";
 import { applyHttpRateLimit } from "./rate-limit";
 import { jsonResponse, methodNotAllowed } from "./responses";
+import { handleMapLive } from "./map-live";
 
 const MAX_AGE_SECONDS = 180;
 const CACHE_SECONDS = 30;
@@ -38,7 +39,8 @@ export function mapDockSnapshot(snapshot: SystemFeedAvailabilityResult, now = Da
 
 export async function handleMapDocks(request: Request, env: Env, context: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
-  const id = /^\/map-docks\/([a-z0-9_-]{1,80})$/.exec(url.pathname)?.[1];
+  const match = /^\/map-docks\/([a-z0-9_-]{1,80})(?:\/(snapshot|events))?$/.exec(url.pathname);
+  const id = match?.[1];
   if (!id || !BUNDLED_CATALOG.systems.some(system => system.system_id === id && system.enabled)) {
     return jsonResponse({ error: "NOT_FOUND" }, { status: 404, headers: CORS });
   }
@@ -46,6 +48,7 @@ export async function handleMapDocks(request: Request, env: Env, context: Execut
     ...CORS, "access-control-allow-methods": "GET, HEAD, OPTIONS", "access-control-max-age": "86400",
   } });
   if (request.method !== "GET" && request.method !== "HEAD") return methodNotAllowed(["GET", "HEAD", "OPTIONS"]);
+  if (match?.[2]) return handleMapLive(request, env, context, id, match[2] === "events");
   // Ignore query strings so callers cannot create arbitrary cache variants.
   const cacheKey = new Request(`${url.origin}${url.pathname}`);
   const cached = await caches.default.match(cacheKey);
