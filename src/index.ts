@@ -4,6 +4,7 @@ import { BUNDLED_CATALOG, loadCatalogPointer } from "./catalog";
 import { MCP_ALLOWED_HOSTNAMES, MCP_ALLOWED_ORIGIN_HOSTNAMES, SERVICE_NAME, SERVICE_VERSION } from "./config";
 import { SystemFeed } from "./durable";
 import { applyHttpRateLimit } from "./http/rate-limit";
+import { handleMapDocks } from "./http/map-docks";
 import { createRequestContext } from "./http/request-context";
 import {
   jsonResponse,
@@ -307,6 +308,9 @@ export default {
     }
 
     const requestContext = createRequestContext(request);
+    if (url.pathname.startsWith("/map-docks/")) {
+      return addRequestId(await handleMapDocks(request, env, executionContext), requestContext.requestId);
+    }
     if (request.method !== "GET" && request.method !== "HEAD") {
       return addRequestId(
         PUBLIC_GET_PATHS.has(url.pathname)
