@@ -769,7 +769,10 @@ export const normalizeStationStatuses = (
           typeCategories.has(stableId(entry.vehicle_type_id, 256) ?? ""))) {
       const bicycleCount = (counts.bike ?? 0) + (counts.ebike ?? 0) + (counts.cargo_bike ?? 0);
       const knownTotal = Object.values(counts).reduce((total, count) => total + count, 0);
-      if (counts.bike !== undefined || counts.ebike !== undefined || counts.cargo_bike !== undefined || knownTotal === bikes) {
+      if ((counts.other ?? 0) > 0) {
+        bikes = null;
+        ambiguousTypeCount += 1;
+      } else if (counts.bike !== undefined || counts.ebike !== undefined || counts.cargo_bike !== undefined || knownTotal === bikes) {
         bikes = bicycleCount;
       } else {
         bikes = null;

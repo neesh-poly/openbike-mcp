@@ -102,6 +102,19 @@ describe("city configuration and feed adapters", () => {
     expect(result.value[0]?.availability.bikes_available).toBe(3);
     expect(result.value[0]?.availability.vehicle_type_counts).toEqual({ ebike: 3, scooter: 7 });
   });
+
+  it("keeps an unrecognized vehicle category unknown instead of reporting zero bikes", () => {
+    const result = normalizeStationStatuses({ version: "3.0", last_updated: time, data: { stations: [{
+      station_id: "unclassified", num_vehicles_available: 4, num_docks_available: 2,
+      vehicle_types_available: [{ vehicle_type_id: "unknown", count: 4 }],
+      is_installed: true, is_renting: true, is_returning: true, last_reported: time,
+    }] } }, { systemId: "unclassified", discoveryUrl: source.discoveryUrl, detectedVersion: "3.0", fetchedAt: time,
+      vehicleTypes: [{ system_id: "unclassified", vehicle_type_id: "unknown", category: "other",
+        form_factor: null, propulsion_type: null, max_range_meters: null }] });
+    expect(result.value[0]?.availability.bikes_available).toBeNull();
+    expect(result.value[0]?.availability.vehicle_type_counts).toEqual({ other: 4 });
+    expect(result.warnings.map(warning => warning.code)).toContain("VEHICLE_TYPE_AMBIGUOUS");
+  });
 });
 
 const tflPoint = (overrides: Record<string, string> = {}) => ({
