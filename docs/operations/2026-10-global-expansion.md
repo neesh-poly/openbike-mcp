@@ -56,3 +56,34 @@ Synthetic tests cover old/new GBFS versions, legacy count shapes, mixed scooters
 Eighteen enabled systems mean 18 daily scheduled probes. Seventeen GBFS systems use four or five bounded feed requests each; TfL uses one. The 4 MiB feed limit, 4 MiB normalized snapshot limit, four-system per-request fan-out, queue concurrency, and rate limits remain unchanged. Demand-driven refresh costs still depend on usage. The local benchmark verifies functional/resource bounds, not deployed per-invocation CPU or isolate memory.
 
 The existing dependency audit reports six advisories in unchanged transitive dependencies (`fast-uri`, `ip-address`, `hono`). This release does not bypass the required CI audit or merge through a failed check.
+
+## Deployed verification
+
+Validated on October 2, 2026. Production publishes 18 enabled systems in catalog `md-20261002T220929497Z-7c73104755785487`. All 18 passed city and coordinate lookup, pickup and return queries, station detail, and vehicle-type filtering when counts were available. Every checked result respected the 180-second query budget and had positive availability with the appropriate operational flags.
+
+| City | Pickup results | Return results | First pickup age | First return age |
+|---|---:|---:|---:|---:|
+| New York City | 3 | 3 | 165 s | 158 s |
+| Vancouver | 3 | 3 | 39 s | 44 s |
+| Oslo | 3 | 3 | 48 s | 53 s |
+| Vienna | 3 | 3 | 63 s | 69 s |
+| San Francisco | 3 | 3 | 123 s | 111 s |
+| Boston | 3 | 3 | 98 s | 110 s |
+| Chicago | 3 | 3 | 125 s | 140 s |
+| Washington, DC | 3 | 3 | 115 s | 101 s |
+| Toronto | 3 | 3 | 117 s | 127 s |
+| Montréal | 3 | 3 | 91 s | 27 s |
+| Austin | 3 | 3 | 11 s | 102 s |
+| Berlin | 3 | 3 | 38 s | 44 s |
+| Madrid | 3 | 3 | 65 s | 63 s |
+| Barcelona | 3 | 3 | 169 s | 161 s |
+| Tokyo | 3 | 3 | 61 s | 64 s |
+| Philadelphia | 3 | 3 | 55 s | 60 s |
+| Los Angeles | 3 | 3 | 46 s | 51 s |
+| London | 3 | 3 | 159 s | 54 s |
+
+Final application commit: `67b726e`. Production Worker: `890e3486-2b95-4db7-b533-e4cb7ec831cb`; staging Worker: `90120ad1-3b7a-4880-8829-8884855fb704`. The final normalization fix preserves unknown availability for unclassified vehicles; its regression test passed with the full 166-test suite. TypeScript, staging/production dry-run builds, the PRD source check, and the platform fixture benchmark passed. Modern-auto and legacy-2025 MCP protocol smoke tests passed in both environments.
+
+The initial staging London request hit an upstream HTTP 429; a later retry passed. All 18 production cities passed without a retry. Freshness is evaluated per station, so a successful city check does not imply every station in that city is current. Query responses retain stale-data warnings for excluded or lower-confidence observations.
+
+Required CI on `67b726e` remains failed only at `pnpm audit --prod` (run `37071116347`); no branch-protection or audit bypass was used. The application is deployed while the source PR remains open. Raw local test, deployment, and live-query evidence is retained under ignored `docs/qa/global-*` files.
