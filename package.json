@@ -27,6 +27,7 @@
     "deploy:production": "wrangler deploy --env production",
     "benchmark:platform": "tsx scripts/platform-fit-fixture.ts",
     "smoke:mcp": "tsx scripts/mcp-smoke.ts",
+    "smoke:coverage": "tsx scripts/coverage-smoke.ts",
     "smoke:platform": "tsx scripts/platform-fit.ts",
     "smoke:protocol": "tsx scripts/raw-protocol-smoke.ts",
     "test": "vitest run --config vitest.config.ts && vitest run --config vitest.worker.config.ts --passWithNoTests",

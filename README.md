@@ -4,7 +4,7 @@
 
 An open-source, read-only Model Context Protocol server for live bikeshare discovery and station availability. It normalizes heterogeneous General Bikeshare Feed Specification (GBFS) feeds so agents can answer questions such as “Can I return a bike near here?” with distance, operational state, and explicit freshness.
 
-The four-system production canary is live on Cloudflare and has passed staging and production smoke validation. Its September 2, 2026 launch catalog contained 1,524 systems: four manually reviewed enabled systems and 1,520 disabled candidates. Worldwide public beta remains a later milestone; disabled candidates are not probed, coordinate-matched, or returned until individually reviewed and promoted.
+OpenBike runs on Cloudflare with seven reviewed systems: New York, San Francisco, Boston, Chicago, Vancouver, Oslo, and Vienna. Its September 2, 2026 launch catalog contained 1,524 systems: four manually reviewed enabled systems and 1,520 disabled candidates. Worldwide public beta remains a later milestone; disabled candidates are not probed, coordinate-matched, or returned until individually reviewed and promoted.
 
 - MCP endpoint: `https://mcp.openbike.neesh.page/mcp`
 - Service health: `https://mcp.openbike.neesh.page/healthz`
@@ -58,7 +58,7 @@ Deployments require an authenticated Wrangler session or a narrowly scoped Cloud
 
 ## Release scope
 
-The live production canary enables four manually reviewed systems: Citi Bike (New York), Mobi (Vancouver), Oslo Bysykkel, and WienMobil Rad (Vienna). The September 2, 2026 launch catalog contained 1,524 systems - four enabled reviewed systems and 1,520 disabled candidates - and scheduled Workflow/Queue probes publish materialized operational state at `/status`; disabled systems are never probed, coordinate-matched, or returned by MCP tools. See [docs/SUPPORTED_SYSTEMS.md](docs/SUPPORTED_SYSTEMS.md) for the promotion checklist and the remaining worldwide-coverage gates.
+The reviewed catalog enables Citi Bike (New York), Lyft Bike (San Francisco Bay Area), Bluebikes (Greater Boston), Divvy (Chicago), Mobi (Vancouver), Oslo Bysykkel, and WienMobil Rad (Vienna). The September 2, 2026 launch catalog contained 1,524 systems - four enabled reviewed systems and 1,520 disabled candidates - and scheduled Workflow/Queue probes publish materialized operational state at `/status`; disabled systems are never probed, coordinate-matched, or returned by MCP tools. See [docs/SUPPORTED_SYSTEMS.md](docs/SUPPORTED_SYSTEMS.md) for the promotion checklist and the remaining worldwide-coverage gates.
 
 ## Product requirements
 

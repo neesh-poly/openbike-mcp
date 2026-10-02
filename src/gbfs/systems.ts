@@ -63,6 +63,63 @@ export const INITIAL_GBFS_SYSTEMS = [
       },
     ],
   },
+  {
+    systemId: "lyft_bay",
+    discoveryUrl: "https://gbfs.lyftbikes.com/gbfs/2.3/gbfs.json",
+    city: "San Francisco",
+    region: "San Francisco Bay Area, California",
+    countryCode: "US",
+    preferredLanguages: ["en"],
+    reviewedHosts: [
+      {
+        hostname: "gbfs.lyftbikes.com",
+        pathPrefixes: ["/gbfs/"],
+      },
+      {
+        hostname: "gbfs.lyft.com",
+        pathPrefixes: ["/gbfs/"],
+      }
+    ],
+    licenseOverride: "https://baywheels-assets.s3.amazonaws.com/data-license-agreement.html",
+  },
+  {
+    systemId: "bluebikes",
+    discoveryUrl: "https://gbfs.bluebikes.com/gbfs/2.3/gbfs.json",
+    city: "Boston",
+    region: "Greater Boston, Massachusetts",
+    countryCode: "US",
+    preferredLanguages: ["en"],
+    reviewedHosts: [
+      {
+        hostname: "gbfs.bluebikes.com",
+        pathPrefixes: ["/gbfs/"],
+      },
+      {
+        hostname: "gbfs.lyft.com",
+        pathPrefixes: ["/gbfs/"],
+      }
+    ],
+    licenseOverride: "https://bluebikes.com/data-license-agreement",
+  },
+  {
+    systemId: "lyft_chi",
+    discoveryUrl: "https://gbfs.divvybikes.com/gbfs/2.3/gbfs.json",
+    city: "Chicago",
+    region: "Illinois",
+    countryCode: "US",
+    preferredLanguages: ["en"],
+    reviewedHosts: [
+      {
+        hostname: "gbfs.divvybikes.com",
+        pathPrefixes: ["/gbfs/"],
+      },
+      {
+        hostname: "gbfs.lyft.com",
+        pathPrefixes: ["/gbfs/"],
+      }
+    ],
+    licenseOverride: "https://divvybikes.com/data-license-agreement",
+  },
 ] as const satisfies readonly GbfsSystemSource[];
 
 export const findInitialGbfsSystem = (

@@ -21,13 +21,16 @@ const expandedCatalog = (count: number, version: string): CatalogSnapshot => ({
 });
 
 describe("catalog validation and lookup", () => {
-  it("ships four validated reviewed launch systems", () => {
+  it("ships seven validated reviewed systems", () => {
     const catalog = validateCatalogSnapshot(BUNDLED_CATALOG);
     expect(catalog.systems.map((system) => system.system_id)).toEqual([
       "lyft_nyc",
       "mobibikes_ca_vancouver",
       "oslobysykkel",
       "nextbike_wr",
+      "lyft_bay",
+      "bluebikes",
+      "lyft_chi",
     ]);
     expect(getCatalogSystem(catalog, "Mobibikes_CA_Vancouver")?.system_id).toBe(
       "mobibikes_ca_vancouver",

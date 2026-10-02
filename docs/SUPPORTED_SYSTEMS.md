@@ -1,6 +1,6 @@
 # Supported systems and catalog admission
 
-The live production canary enables the four manually reviewed systems below. Its September 2, 2026 launch catalog contained 1,524 systems: four enabled reviewed systems and 1,520 disabled candidates. The daily Workflow stages eligible rows from MobilityData's canonical `systems.csv` as **disabled candidates** when `MOBILITYDATA_CATALOG_MODE=candidates`. Candidate indexing is not a claim of live or worldwide coverage: candidates are not probed, returned by MCP tools, or matched to coordinates until an operator explicitly promotes them.
+OpenBike enables the seven reviewed systems below. Its September 2, 2026 launch catalog contained 1,524 systems: four enabled reviewed systems and 1,520 disabled candidates. The daily Workflow stages eligible rows from MobilityData's canonical `systems.csv` as **disabled candidates** when `MOBILITYDATA_CATALOG_MODE=candidates`. Candidate indexing is not a claim of live or worldwide coverage: candidates are not probed, returned by MCP tools, or matched to coordinates until an operator explicitly promotes them.
 
 | System ID | System | GBFS | Why included |
 |---|---|---:|---|
@@ -8,8 +8,11 @@ The live production canary enables the four manually reviewed systems below. Its
 | `mobibikes_ca_vancouver` | Mobi Bike Share, Vancouver | 2.2 | Virtual stations, geofencing, and stationed/free-floating edge cases. |
 | `oslobysykkel` | Oslo Bysykkel | 3.0 | Localized strings, station-area polygons, ISO timestamps, and short TTLs. |
 | `nextbike_wr` | WienMobil Rad, Vienna | 2.3 | Nextbike extensions, optional capacity, and mixed vehicle variants. |
+| `lyft_bay` | Lyft Bike (formerly Bay Wheels), San Francisco Bay Area | 2.3 | Station availability and e-bikes. |
+| `bluebikes` | Bluebikes, Greater Boston | 2.3 | Version-pinned feed; preserves the directory ID despite upstream `lyft_bos`. |
+| `lyft_chi` | Divvy, Chicago | 2.3 | Station availability with separate bicycle, e-bike, and scooter counts. |
 
-The normalized `system_id` is lowercase even when the upstream MobilityData catalog uses mixed case. Reachability was checked on September 2, 2026; it is not a long-term uptime guarantee.
+The normalized `system_id` is lowercase even when the upstream MobilityData catalog uses mixed case. The original four systems were checked on September 2, 2026; San Francisco, Boston, and Chicago were reviewed on October 2, 2026. See [city expansion evidence](operations/2026-10-city-expansion.md). Reachability is not a long-term uptime guarantee.
 
 ## Provider policies and behavior
 
@@ -37,11 +40,11 @@ The catalog source is pinned to the reviewed `raw.githubusercontent.com/Mobility
 
 Candidates therefore use `enabled: false`, `coverage.confidence: unknown`, null bounds/centroid, null `detected_version`, an unknown license, and all-false placeholder capabilities. All-false is an inert internal placeholder, not a claim that a provider lacks those capabilities. Because unknown coverage has no geometry, it never satisfies a coordinate lookup.
 
-`MOBILITYDATA_CATALOG_MODE=reviewed` publishes only the four bootstrap systems. `candidates` adds the inert candidate index. There is deliberately no configuration value that globally enables every MobilityData row.
+`MOBILITYDATA_CATALOG_MODE=reviewed` publishes only the reviewed bootstrap systems. `candidates` adds the inert candidate index. There is deliberately no configuration value that globally enables every MobilityData row.
 
 ## Promotion gate
 
-Promotion is per system through the `catalog:overrides` KV document. Enabling a disabled candidate is rejected unless the same override explicitly supplies `reviewed_hosts`; the resulting catalog still has to pass schema, exact-host, and regression validation. Before promotion, review and record:
+Reviewed systems may be added to the bundled catalog in code, with the evidence below. Runtime promotion is per system through the `catalog:overrides` KV document. Enabling a disabled candidate is rejected unless the same override explicitly supplies `reviewed_hosts`; the resulting catalog still has to pass schema, exact-host, and regression validation. Before promotion, review and record:
 
 1. discovery reachability and the advertised GBFS version;
 2. every discovery and subfeed hostname (cross-host feeds need each exact host added);

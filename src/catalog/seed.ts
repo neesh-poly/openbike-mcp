@@ -1,6 +1,6 @@
 import type { CatalogSnapshot, CatalogSystem } from "./types";
 
-export const BUNDLED_CATALOG_VERSION = "bundled-2026-09-02";
+export const BUNDLED_CATALOG_VERSION = "bundled-2026-10-02";
 
 const DEFAULT_CAPABILITIES = {
   docked: true,
@@ -137,12 +137,145 @@ export const BUNDLED_CATALOG_SYSTEMS: readonly CatalogSystem[] = [
     preferred_languages: ["de", "en"],
     enabled: true,
   },
+  // Reviewed 2026-10-02; bounds are derived from provider station locations.
+  {
+    system_id: "lyft_bay",
+    source_system_id: "lyft_bay",
+    name: "Lyft Bike",
+    operator: "Lyft",
+    city: "San Francisco",
+    region: "San Francisco Bay Area, California",
+    country_code: "US",
+    timezone: "America/Los_Angeles",
+    discovery_url: "https://gbfs.lyftbikes.com/gbfs/2.3/gbfs.json",
+    detected_version: "2.3",
+    languages: ["en", "fr", "es"],
+    license: {
+      id: null,
+      name: "Lyft Bike Data License Agreement",
+      url: "https://baywheels-assets.s3.amazonaws.com/data-license-agreement.html",
+      status: "declared",
+    },
+    capabilities: {
+      docked: true,
+      dockless: true,
+      ebike: true,
+      station_status: true,
+    },
+    coverage: {
+      bounds: {
+        south: 37.309014074275915,
+        west: -122.511208,
+        north: 37.88534088973987,
+        east: -121.8636494,
+      },
+      centroid: {
+        latitude: 37.7749,
+        longitude: -122.4194,
+      },
+      confidence: "station_bounds",
+      buffer_meters: 5_000,
+    },
+    location_hint: "wnam",
+    reviewed_hosts: ["gbfs.lyftbikes.com", "gbfs.lyft.com"],
+    request_headers: {},
+    preferred_languages: ["en"],
+    enabled: true,
+  },
+  {
+    system_id: "bluebikes",
+    source_system_id: "bluebikes",
+    name: "Bluebikes",
+    operator: "Lyft",
+    city: "Boston",
+    region: "Greater Boston, Massachusetts",
+    country_code: "US",
+    timezone: "America/New_York",
+    discovery_url: "https://gbfs.bluebikes.com/gbfs/2.3/gbfs.json",
+    detected_version: "2.3",
+    languages: ["en", "fr", "es"],
+    license: {
+      id: null,
+      name: "Bluebikes Data License Agreement",
+      url: "https://bluebikes.com/data-license-agreement",
+      status: "declared",
+    },
+    capabilities: {
+      docked: true,
+      dockless: true,
+      ebike: true,
+      station_status: true,
+    },
+    coverage: {
+      bounds: {
+        south: 42.252287,
+        west: -71.2477594614029,
+        north: 42.53466911383265,
+        east: -70.87021440267563,
+      },
+      centroid: {
+        latitude: 42.3601,
+        longitude: -71.0589,
+      },
+      confidence: "station_bounds",
+      buffer_meters: 5_000,
+    },
+    location_hint: "enam",
+    reviewed_hosts: ["gbfs.bluebikes.com", "gbfs.lyft.com"],
+    request_headers: {},
+    preferred_languages: ["en"],
+    enabled: true,
+  },
+  {
+    system_id: "lyft_chi",
+    source_system_id: "lyft_chi",
+    name: "Divvy",
+    operator: "Lyft",
+    city: "Chicago",
+    region: "Illinois",
+    country_code: "US",
+    timezone: "America/Chicago",
+    discovery_url: "https://gbfs.divvybikes.com/gbfs/2.3/gbfs.json",
+    detected_version: "2.3",
+    languages: ["en", "fr", "es"],
+    license: {
+      id: null,
+      name: "Divvy Data License Agreement",
+      url: "https://divvybikes.com/data-license-agreement",
+      status: "declared",
+    },
+    capabilities: {
+      docked: true,
+      dockless: true,
+      ebike: true,
+      station_status: true,
+    },
+    coverage: {
+      bounds: {
+        south: 41.64850076266409,
+        west: -87.84396,
+        north: 42.064854,
+        east: -87.52823173999786,
+      },
+      centroid: {
+        latitude: 41.8781,
+        longitude: -87.6298,
+      },
+      confidence: "station_bounds",
+      buffer_meters: 5_000,
+    },
+    location_hint: "enam",
+    reviewed_hosts: ["gbfs.divvybikes.com", "gbfs.lyft.com"],
+    request_headers: {},
+    preferred_languages: ["en"],
+    enabled: true,
+  },
 ];
 
 export const BUNDLED_CATALOG: CatalogSnapshot = {
   schema_version: 1,
   version: BUNDLED_CATALOG_VERSION,
-  generated_at: "2026-09-02T00:00:00.000Z",
+  generated_at: "2026-10-02T00:00:00.000Z",
   source_url:
     "https://raw.githubusercontent.com/MobilityData/gbfs/master/systems.csv",
   source_etag: null,

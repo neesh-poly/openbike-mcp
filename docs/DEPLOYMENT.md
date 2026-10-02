@@ -1,6 +1,6 @@
 # Deployment
 
-The four-system production canary is live at `https://mcp.openbike.neesh.page/mcp` and has passed deployment and smoke validation. The September 2, 2026 launch catalog contained 1,524 systems: four reviewed systems were enabled and 1,520 candidates remained disabled unless individually promoted through the reviewed override path.
+The reviewed production service is live at `https://mcp.openbike.neesh.page/mcp` and has passed deployment and smoke validation. The September 2, 2026 launch catalog contained 1,524 systems: four reviewed systems were enabled and 1,520 candidates remained disabled unless individually promoted through the reviewed override path.
 
 ## Environments
 
