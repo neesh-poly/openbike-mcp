@@ -26,7 +26,11 @@ export type GbfsDataFeedName =
 
 export type GbfsFetchFeedName = "gbfs" | GbfsDataFeedName;
 
+export type FeedFormat = "gbfs" | "velib" | "tfl";
+
 export interface GbfsSystemSource {
+  format?: FeedFormat;
+  name?: string;
   systemId: string;
   discoveryUrl: string;
   city?: string;
@@ -53,6 +57,7 @@ export interface NormalizationResult<T> {
 }
 
 export interface GbfsNormalizationContext {
+  name?: string;
   systemId: string;
   discoveryUrl: string;
   detectedVersion: string;
@@ -90,6 +95,8 @@ export interface GbfsStationBundle {
 }
 
 export interface GbfsClientOptions {
+  /** Pure conversion only. Raw documents, validators, and attribution remain intact. */
+  adaptDocument?: (feed: GbfsFetchFeedName, document: unknown) => unknown;
   fetcher?: FetchLike;
   maxBytes?: number;
   timeoutMs?: number;

@@ -10,7 +10,7 @@ The reviewed production service is live at `https://mcp.openbike.neesh.page/mcp`
 
 1. Run `pnpm install --frozen-lockfile`, `pnpm check`, `pnpm test`, and `pnpm build`.
 2. Deploy staging with `pnpm deploy:staging`.
-3. Seed or publish the catalog and run the live provider canary.
+3. Seed or publish the catalog and run `pnpm smoke:coverage <staging-mcp-endpoint>` for every enabled city. Allow the new Workflow code to propagate before triggering a fresh catalog version.
 4. Exercise initialize, tools/list, and all five tools using two independent MCP clients.
 5. Record the release-fit evidence available at deployment time, including bundle size, warm/cold latency, connection ceilings, and refresh coalescing. Before private-alpha promotion, separately complete the deployed CPU and isolate-memory profiling required by the platform-fit gate.
 6. Deploy production with `pnpm deploy:production` and rerun the health and protocol smoke suite.

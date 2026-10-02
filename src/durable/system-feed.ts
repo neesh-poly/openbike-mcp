@@ -4,13 +4,14 @@ import type { CatalogSystem } from "../catalog";
 import { CatalogSystemSchema, stableJson } from "../catalog";
 import { runtimeConfig } from "../config";
 import type { FeedObservation, Warning } from "../contracts";
-import { GbfsClient, getGbfsFailureFeedName } from "../gbfs/client";
+import { getGbfsFailureFeedName } from "../gbfs/client";
+import { createStationFeedClient } from "../feeds/client";
+import { catalogSource } from "../feeds/source";
 import type {
   CachedGbfsDocument,
   GbfsFetchFeedName,
   GbfsFetchState,
   GbfsStationBundle,
-  GbfsSystemSource,
 } from "../gbfs/types";
 import { emitMetric, logEvent } from "../observability";
 import { beginProbeCycle, StatusCycleSchema, SystemProbeStatusSchema } from "../status";
@@ -221,26 +222,6 @@ const parseMetadata = (json: string): CachedGbfsDocument["metadata"] => {
     ...(typeof value.contentHash === "string"
       ? { contentHash: value.contentHash }
       : {}),
-  };
-};
-
-const catalogSource = (system: CatalogSystem): GbfsSystemSource => {
-  const licenseOverride =
-    system.license.url ?? system.license.id ?? system.license.name;
-  return {
-    systemId: system.system_id,
-    discoveryUrl: system.discovery_url,
-    reviewedHosts: system.reviewed_hosts.map((hostname) => ({ hostname })),
-    ...(system.city === null ? {} : { city: system.city }),
-    ...(system.region === null ? {} : { region: system.region }),
-    ...(system.country_code === null ? {} : { countryCode: system.country_code }),
-    ...(system.preferred_languages.length === 0
-      ? {}
-      : { preferredLanguages: system.preferred_languages }),
-    ...(Object.keys(system.request_headers).length === 0
-      ? {}
-      : { requestHeaders: system.request_headers }),
-    ...(licenseOverride === null ? {} : { licenseOverride }),
   };
 };
 
@@ -777,7 +758,7 @@ export class SystemFeed extends DurableObject<Env> {
     }
 
     try {
-      const client = new GbfsClient(catalogSource(system), {
+      const client = createStationFeedClient(catalogSource(system), {
         maxBytes: runtimeConfig(this.env).maxFeedBytes,
         timeoutMs: 10_000,
       });
@@ -1009,7 +990,7 @@ export class SystemFeed extends DurableObject<Env> {
     const rollingSuccesses = rolling.successes ?? 0;
     const rollingFailures = rolling.failures ?? 0;
     const rollingTotal = rollingSuccesses + rollingFailures;
-    const discoveredFeeds = new Set<string>(["gbfs"]);
+    const discoveredFeeds = new Set<string>(system?.feed_format === "tfl" ? [] : ["gbfs"]);
     if (current !== null) {
       for (const feedName of Object.keys(current.snapshot.discovery.feeds)) {
         discoveredFeeds.add(feedName);

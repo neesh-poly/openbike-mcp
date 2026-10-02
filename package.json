@@ -32,7 +32,8 @@
     "smoke:protocol": "tsx scripts/raw-protocol-smoke.ts",
     "test": "vitest run --config vitest.config.ts && vitest run --config vitest.worker.config.ts --passWithNoTests",
     "test:worker": "vitest run --config vitest.worker.config.ts",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "smoke:feeds": "tsx scripts/feed-smoke.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0",

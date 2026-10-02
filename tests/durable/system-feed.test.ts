@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { evictDurableObject, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CatalogSystem } from "../../src/catalog";
+import { BUNDLED_CATALOG, type CatalogSystem } from "../../src/catalog";
 import {
   citiLikeDiscoveryV23,
   citiLikeStationInformationV23,
@@ -162,6 +162,37 @@ describe("SystemFeed SQLite state", () => {
     ]);
     expect(upgraded.vehicleTypeTable).toEqual([{ name: "vehicle_type_rows" }]);
     expect(upgraded.refreshOutcomesTable).toEqual([{ name: "refresh_outcomes" }]);
+  });
+
+  it("persists a TfL adapter snapshot through the common storage path", async () => {
+    const source = BUNDLED_CATALOG.systems.find(system => system.system_id === "tfl_london")!;
+    const modified = new Date().toISOString();
+    const point = {
+      id: "BikePoints_1", commonName: "Test London station", lat: 51.5, lon: -0.12,
+      additionalProperties: Object.entries({ Installed: "true", Locked: "false", NbBikes: "7",
+        NbDocks: "20", NbEmptyDocks: "11", NbStandardBikes: "4", NbEBikes: "3" })
+        .map(([key, value]) => ({ key, value, modified })),
+    };
+    const fetchMock = vi.fn(async () => Response.json([point]));
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const stub = env.SYSTEM_FEEDS.getByName(`tfl-${crypto.randomUUID()}`) as unknown as DurableObjectStub<SystemFeed>;
+      const first = await runInDurableObject(stub, instance => instance.getAvailability({
+        catalogSystem: source, forceRefresh: true,
+      }));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(first.statuses[0]?.availability).toMatchObject({ bikes_available: 7, docks_available: 11,
+        vehicle_type_counts: { bike: 4, ebike: 3 } });
+      await evictDurableObject(stub);
+      const restored = await runInDurableObject(stub, instance => instance.getAvailability({ catalogSystem: source }));
+      expect(restored.stations).toEqual(first.stations);
+      expect(restored.statuses).toEqual(first.statuses);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const health = await runInDurableObject(stub, instance => instance.getHealth());
+      expect(health.feeds.map(feed => feed.feed_name)).toEqual(["station_information", "station_status"]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("persists snapshots across eviction and coalesces concurrent refreshes", async () => {

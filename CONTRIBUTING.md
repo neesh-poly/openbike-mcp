@@ -15,6 +15,8 @@ pnpm build:production
 
 Use Node.js 22.18 or newer. Run `pnpm cf-typegen` after changing `wrangler.jsonc` bindings; the package script already selects staging.
 
+See [Extending city coverage](docs/FEED_ADAPTERS.md) for the catalog, adapter boundary, and live validation steps.
+
 ## Feed and fixture rules
 
 - Do not add arbitrary client-supplied feed URLs. Catalog entries and endpoint hosts are reviewed code/data changes.

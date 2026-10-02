@@ -1,18 +1,31 @@
 # Supported systems and catalog admission
 
-OpenBike enables the seven reviewed systems below. Its September 2, 2026 launch catalog contained 1,524 systems: four enabled reviewed systems and 1,520 disabled candidates. The daily Workflow stages eligible rows from MobilityData's canonical `systems.csv` as **disabled candidates** when `MOBILITYDATA_CATALOG_MODE=candidates`. Candidate indexing is not a claim of live or worldwide coverage: candidates are not probed, returned by MCP tools, or matched to coordinates until an operator explicitly promotes them.
+OpenBike enables the 18 reviewed systems below. Its September 2, 2026 launch catalog contained 1,524 systems: four enabled reviewed systems and 1,520 disabled candidates. The daily Workflow stages eligible rows from MobilityData's canonical `systems.csv` as **disabled candidates** when `MOBILITYDATA_CATALOG_MODE=candidates`. Candidate indexing is not a claim of live or worldwide coverage: candidates are not probed, returned by MCP tools, or matched to coordinates until an operator explicitly promotes them.
 
-| System ID | System | GBFS | Why included |
-|---|---|---:|---|
-| `lyft_nyc` | Citi Bike, New York City | 2.3 | Large docked-system and mixed bike/e-bike baseline. |
-| `mobibikes_ca_vancouver` | Mobi Bike Share, Vancouver | 2.2 | Virtual stations, geofencing, and stationed/free-floating edge cases. |
-| `oslobysykkel` | Oslo Bysykkel | 3.0 | Localized strings, station-area polygons, ISO timestamps, and short TTLs. |
-| `nextbike_wr` | WienMobil Rad, Vienna | 2.3 | Nextbike extensions, optional capacity, and mixed vehicle variants. |
-| `lyft_bay` | Lyft Bike (formerly Bay Wheels), San Francisco Bay Area | 2.3 | Station availability and e-bikes. |
-| `bluebikes` | Bluebikes, Greater Boston | 2.3 | Version-pinned feed; preserves the directory ID despite upstream `lyft_bos`. |
-| `lyft_chi` | Divvy, Chicago | 2.3 | Station availability with separate bicycle, e-bike, and scooter counts. |
+| City | System ID | Network | Format |
+|---|---|---|---|
+| New York City | `lyft_nyc` | Citi Bike | 2.3 |
+| Vancouver | `mobibikes_ca_vancouver` | Mobi by Rogers (Vancouver) | 2.2 |
+| Oslo | `oslobysykkel` | Oslo Bysykkel | 3.0 |
+| Vienna | `nextbike_wr` | WienMobil Rad | 2.3 |
+| San Francisco | `lyft_bay` | Lyft Bike | 2.3 |
+| Boston | `bluebikes` | Bluebikes | 2.3 |
+| Chicago | `lyft_chi` | Divvy | 2.3 |
+| Washington, DC | `cabi` | Capital Bikeshare | 2.3 |
+| Toronto | `bike_share_toronto` | Bike Share Toronto | 3.0 |
+| Montréal | `bixi_mtl` | BIXI Montréal | 2.2 |
+| Austin | `austin` | CapMetro Bikeshare | 3.0 |
+| Berlin | `nextbike_bn` | nextbike Berlin | 2.3 |
+| Madrid | `bicimad_madrid` | bicimad | 3.0 |
+| Barcelona | `bike_barcelona` | Bicing | 3.0 |
+| Tokyo | `docomo-cycle-tokyo` | docomo bike share | 2.3 |
+| Philadelphia | `bcycle_indego` | Indego | 1.1 |
+| Los Angeles | `bcycle_lametro` | Metro Bike Share | 1.1 |
+| London | `tfl_london` | Santander Cycles | TfL-BikePoint |
 
-The normalized `system_id` is lowercase even when the upstream MobilityData catalog uses mixed case. The original four systems were checked on September 2, 2026; San Francisco, Boston, and Chicago were reviewed on October 2, 2026. See [city expansion evidence](operations/2026-10-city-expansion.md). Reachability is not a long-term uptime guarantee.
+Paris (`paris`, Vélib GBFS 1.0) and Portland (`biketown_pdx`, BIKETOWN GBFS 2.3) are configured but disabled: their station clocks failed the October 2 freshness checks. Seattle remains pending a usable bicycle feed and dockless query support. See [current expansion evidence](operations/2026-10-global-expansion.md).
+
+The normalized `system_id` stays lowercase and stable even when upstream names or IDs differ. Feed reachability is not an uptime guarantee. Tokyo exposes aggregate bikes and return spaces but no reliable per-bike-type counts; its e-bike availability remains unknown.
 
 ## Provider policies and behavior
 

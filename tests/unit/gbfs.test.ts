@@ -57,7 +57,7 @@ const v3Context: GbfsNormalizationContext = {
 };
 
 describe("GBFS normalization", () => {
-  it.each(["2.1", "2.2", "2.3"])(
+  it.each(["1.0", "1.1", "2.1", "2.2", "2.3"])(
     "accepts the supported v%s discovery envelope",
     (version) => {
       const document = { ...citiLikeDiscoveryV23, version };
@@ -160,10 +160,8 @@ describe("GBFS normalization", () => {
     });
   });
 
-  it("fails closed on legacy discovery but tolerates documented v1.1 station edges", () => {
-    expect(() =>
-      normalizeDiscovery(legacyDiscoveryV11, { systemId: "legacy" }),
-    ).toThrowError(GbfsNormalizationError);
+  it("supports legacy discovery and documented v1.1 station edges", () => {
+    expect(normalizeDiscovery(legacyDiscoveryV11, { systemId: "legacy" }).value.version).toBe("1.1");
 
     const legacyContext: GbfsNormalizationContext = {
       ...v23Context,

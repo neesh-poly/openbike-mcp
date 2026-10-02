@@ -8,7 +8,7 @@ import type {
 } from "./types";
 
 const normalize = (value: string): string =>
-  value.normalize("NFKD").toLocaleLowerCase("en-US").trim();
+  value.normalize("NFKD").replace(/\p{M}/gu, "").toLocaleLowerCase("en-US").trim();
 
 const longitudeInBounds = (
   longitude: number,

@@ -1,6 +1,6 @@
 import type { CatalogSnapshot, CatalogSystem } from "./types";
 
-export const BUNDLED_CATALOG_VERSION = "bundled-2026-10-02";
+export const BUNDLED_CATALOG_VERSION = "bundled-2026-10-02-expanded";
 
 const DEFAULT_CAPABILITIES = {
   docked: true,
@@ -270,6 +270,677 @@ export const BUNDLED_CATALOG_SYSTEMS: readonly CatalogSystem[] = [
     preferred_languages: ["en"],
     enabled: true,
   },
+  // Reviewed public feeds; see docs/operations/2026-10-global-expansion.md.
+  {
+    "system_id": "cabi",
+    "source_system_id": "cabi",
+    "name": "Capital Bikeshare",
+    "operator": "Lyft",
+    "city": "Washington, DC",
+    "region": "District of Columbia, Maryland, Virginia",
+    "country_code": "US",
+    "timezone": "America/New_York",
+    "discovery_url": "https://gbfs.capitalbikeshare.com/gbfs/2.3/gbfs.json",
+    "detected_version": "2.3",
+    "languages": [
+      "en"
+    ],
+    "license": {
+      "id": null,
+      "name": null,
+      "url": "https://capitalbikeshare.com/data-license-agreement",
+      "status": "declared"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": true,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 38.71103517,
+        "west": -77.4193554659783,
+        "north": 39.12582811177034,
+        "east": -76.825535
+      },
+      "centroid": {
+        "latitude": 38.9072,
+        "longitude": -77.0369
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "enam",
+    "reviewed_hosts": [
+      "gbfs.capitalbikeshare.com",
+      "gbfs.lyft.com"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en"
+    ],
+    "enabled": true
+  },
+  {
+    "system_id": "bike_share_toronto",
+    "source_system_id": "bike_share_toronto",
+    "name": "Bike Share Toronto",
+    "operator": null,
+    "city": "Toronto",
+    "region": "Ontario",
+    "country_code": "CA",
+    "timezone": "America/Toronto",
+    "discovery_url": "https://toronto.publicbikesystem.net/customer/gbfs/v3.0/gbfs.json",
+    "detected_version": "3.0",
+    "languages": [
+      "en",
+      "fr",
+      "nl",
+      "es"
+    ],
+    "license": {
+      "id": null,
+      "name": null,
+      "url": null,
+      "status": "unknown"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": false,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 43.5880774,
+        "west": -79.60346425086402,
+        "north": 43.812642480301804,
+        "east": -79.1231844760227
+      },
+      "centroid": {
+        "latitude": 43.6532,
+        "longitude": -79.3832
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "enam",
+    "reviewed_hosts": [
+      "toronto.publicbikesystem.net"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en",
+      "fr"
+    ],
+    "enabled": true
+  },
+  {
+    "system_id": "bixi_mtl",
+    "source_system_id": "Bixi_MTL",
+    "name": "BIXI Montréal",
+    "operator": null,
+    "city": "Montréal",
+    "region": "Quebec",
+    "country_code": "CA",
+    "timezone": "America/Montreal",
+    "discovery_url": "https://gbfs.velobixi.com/gbfs/2-2/gbfs.json",
+    "detected_version": "2.2",
+    "languages": [
+      "en"
+    ],
+    "license": {
+      "id": null,
+      "name": null,
+      "url": null,
+      "status": "unknown"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": false,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 45.379756292248274,
+        "west": -73.94148454070091,
+        "north": 45.70234934325735,
+        "east": -71.87262399125757
+      },
+      "centroid": {
+        "latitude": 45.5019,
+        "longitude": -73.5674
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "enam",
+    "reviewed_hosts": [
+      "gbfs.velobixi.com"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en",
+      "fr"
+    ],
+    "enabled": true
+  },
+  {
+    "system_id": "biketown_pdx",
+    "source_system_id": "biketown_pdx",
+    "name": "BIKETOWN",
+    "operator": null,
+    "city": "Portland",
+    "region": "Oregon",
+    "country_code": "US",
+    "timezone": "America/Los_Angeles",
+    "discovery_url": "https://gbfs.biketownpdx.com/gbfs/2.3/gbfs.json",
+    "detected_version": "2.3",
+    "languages": [
+      "en"
+    ],
+    "license": {
+      "id": null,
+      "name": null,
+      "url": "https://biketownpdx.com/data-license-agreement",
+      "status": "declared"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": true,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 45.4607915,
+        "west": -122.7591351,
+        "north": 45.5965621,
+        "east": -122.5321656
+      },
+      "centroid": {
+        "latitude": 45.5152,
+        "longitude": -122.6784
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "wnam",
+    "reviewed_hosts": [
+      "gbfs.biketownpdx.com",
+      "gbfs.lyft.com"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en"
+    ],
+    "enabled": false
+  },
+  {
+    "system_id": "austin",
+    "source_system_id": "austin",
+    "name": "CapMetro Bikeshare",
+    "operator": null,
+    "city": "Austin",
+    "region": "Texas",
+    "country_code": "US",
+    "timezone": "America/Chicago",
+    "discovery_url": "https://austin.publicbikesystem.net/customer/gbfs/v3.0/gbfs.json",
+    "detected_version": "3.0",
+    "languages": [
+      "en",
+      "fr",
+      "nl",
+      "es"
+    ],
+    "license": {
+      "id": null,
+      "name": null,
+      "url": null,
+      "status": "unknown"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": false,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 30.226188000000004,
+        "west": -97.772695,
+        "north": 30.295394,
+        "east": -97.698123
+      },
+      "centroid": {
+        "latitude": 30.2672,
+        "longitude": -97.7431
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "enam",
+    "reviewed_hosts": [
+      "austin.publicbikesystem.net"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en"
+    ],
+    "enabled": true
+  },
+  {
+    "system_id": "nextbike_bn",
+    "source_system_id": "nextbike_bn",
+    "name": "nextbike Berlin",
+    "operator": "nextbike GmbH, Karl-Heine-Str. 46, 04229 Leipzig",
+    "city": "Berlin",
+    "region": null,
+    "country_code": "DE",
+    "timezone": "Europe/Berlin",
+    "discovery_url": "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_bn/gbfs.json",
+    "detected_version": "2.3",
+    "languages": [
+      "en"
+    ],
+    "license": {
+      "id": "CC0-1.0",
+      "name": null,
+      "url": null,
+      "status": "declared"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": true,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 52.40854,
+        "west": 13.160078,
+        "north": 52.595837,
+        "east": 13.691439
+      },
+      "centroid": {
+        "latitude": 52.52,
+        "longitude": 13.405
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "weur",
+    "reviewed_hosts": [
+      "gbfs.nextbike.net"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en"
+    ],
+    "enabled": true
+  },
+  {
+    "system_id": "bicimad_madrid",
+    "source_system_id": "bicimad_madrid",
+    "name": "bicimad",
+    "operator": null,
+    "city": "Madrid",
+    "region": null,
+    "country_code": "ES",
+    "timezone": "Europe/Madrid",
+    "discovery_url": "https://madrid.publicbikesystem.net/customer/gbfs/v3.0/gbfs.json",
+    "detected_version": "3.0",
+    "languages": [
+      "en",
+      "fr",
+      "nl",
+      "es"
+    ],
+    "license": {
+      "id": null,
+      "name": null,
+      "url": null,
+      "status": "unknown"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": false,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 40.3325463,
+        "west": -3.8163961268440296,
+        "north": 40.5157202,
+        "east": -3.548534
+      },
+      "centroid": {
+        "latitude": 40.4168,
+        "longitude": -3.7038
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "weur",
+    "reviewed_hosts": [
+      "madrid.publicbikesystem.net"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en"
+    ],
+    "enabled": true
+  },
+  {
+    "system_id": "bike_barcelona",
+    "source_system_id": "bike_barcelona",
+    "name": "Bicing",
+    "operator": null,
+    "city": "Barcelona",
+    "region": null,
+    "country_code": "ES",
+    "timezone": "Europe/Madrid",
+    "discovery_url": "https://barcelona.publicbikesystem.net/customer/gbfs/v3.0/gbfs.json",
+    "detected_version": "3.0",
+    "languages": [
+      "ca",
+      "en",
+      "fr",
+      "nl",
+      "es"
+    ],
+    "license": {
+      "id": null,
+      "name": null,
+      "url": null,
+      "status": "unknown"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": false,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 41.3467746,
+        "west": 2.1091535,
+        "north": 41.462095,
+        "east": 2.2206913
+      },
+      "centroid": {
+        "latitude": 41.3874,
+        "longitude": 2.1686
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "weur",
+    "reviewed_hosts": [
+      "barcelona.publicbikesystem.net"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en"
+    ],
+    "enabled": true
+  },
+  {
+    "system_id": "docomo-cycle-tokyo",
+    "source_system_id": "docomo-cycle-tokyo",
+    "name": "docomo bike share",
+    "operator": null,
+    "city": "Tokyo",
+    "region": null,
+    "country_code": "JP",
+    "timezone": "Asia/Tokyo",
+    "discovery_url": "https://api-public.odpt.org/api/v4/gbfs/docomo-cycle-tokyo/gbfs.json",
+    "detected_version": "2.3",
+    "languages": [
+      "ja"
+    ],
+    "license": {
+      "id": null,
+      "name": null,
+      "url": "https://creativecommons.org/licenses/by/4.0/deed.ja",
+      "status": "declared"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": false,
+      "ebike": false,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 35.506142,
+        "west": 139.565817,
+        "north": 35.778605,
+        "east": 139.846383
+      },
+      "centroid": {
+        "latitude": 35.6812,
+        "longitude": 139.7671
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "apac",
+    "reviewed_hosts": [
+      "api-public.odpt.org"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en"
+    ],
+    "enabled": true
+  },
+  {
+    "system_id": "bcycle_indego",
+    "source_system_id": "bcycle_indego",
+    "name": "Indego",
+    "operator": null,
+    "city": "Philadelphia",
+    "region": "Pennsylvania",
+    "country_code": "US",
+    "timezone": "America/New_York",
+    "discovery_url": "https://gbfs.bcycle.com/bcycle_indego/gbfs.json",
+    "detected_version": "1.1",
+    "languages": [
+      "en"
+    ],
+    "license": {
+      "id": null,
+      "name": null,
+      "url": null,
+      "status": "unknown"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": false,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 39.88994,
+        "west": -75.249,
+        "north": 40.03055,
+        "east": -75.10121
+      },
+      "centroid": {
+        "latitude": 39.9526,
+        "longitude": -75.1652
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "enam",
+    "reviewed_hosts": [
+      "gbfs.bcycle.com"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en"
+    ],
+    "enabled": true
+  },
+  {
+    "system_id": "bcycle_lametro",
+    "source_system_id": "bcycle_lametro",
+    "name": "Metro Bike Share",
+    "operator": null,
+    "city": "Los Angeles",
+    "region": "California",
+    "country_code": "US",
+    "timezone": "America/Los_Angeles",
+    "discovery_url": "https://gbfs.bcycle.com/bcycle_lametro/gbfs.json",
+    "detected_version": "1.1",
+    "languages": [
+      "en"
+    ],
+    "license": {
+      "id": null,
+      "name": null,
+      "url": null,
+      "status": "unknown"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": false,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 33.92846,
+        "west": -118.49136,
+        "north": 34.17765,
+        "east": -118.22541
+      },
+      "centroid": {
+        "latitude": 34.0485,
+        "longitude": -118.2585
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "wnam",
+    "reviewed_hosts": [
+      "gbfs.bcycle.com"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en"
+    ],
+    "enabled": true
+  },
+  {
+    "system_id": "paris",
+    "source_system_id": "Paris",
+    "name": "Vélib’ Métropole",
+    "operator": null,
+    "city": "Paris",
+    "region": "Île-de-France",
+    "country_code": "FR",
+    "timezone": "Europe/Paris",
+    "discovery_url": "https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/gbfs.json",
+    "detected_version": "1.0",
+    "languages": [
+      "en"
+    ],
+    "license": {
+      "id": null,
+      "name": null,
+      "url": null,
+      "status": "unknown"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": false,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 48.743385629116,
+        "west": 2.1655421457014,
+        "north": 48.95756799268,
+        "east": 2.5382421165704727
+      },
+      "centroid": {
+        "latitude": 48.8566,
+        "longitude": 2.3522
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "weur",
+    "reviewed_hosts": [
+      "velib-metropole-opendata.smovengo.cloud"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en"
+    ],
+    "enabled": false,
+    "feed_format": "velib"
+  },
+  {
+    "system_id": "tfl_london",
+    "source_system_id": "tfl_london",
+    "name": "Santander Cycles",
+    "operator": "Transport for London",
+    "city": "London",
+    "region": "Greater London",
+    "country_code": "GB",
+    "timezone": "Europe/London",
+    "feed_format": "tfl",
+    "discovery_url": "https://api.tfl.gov.uk/BikePoint",
+    "detected_version": "TfL-BikePoint",
+    "languages": [
+      "en"
+    ],
+    "license": {
+      "id": null,
+      "name": "Transport Data Service terms",
+      "url": "https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service",
+      "status": "declared"
+    },
+    "capabilities": {
+      "docked": true,
+      "dockless": false,
+      "ebike": true,
+      "station_status": true
+    },
+    "coverage": {
+      "bounds": {
+        "south": 51.452997,
+        "west": -0.236769,
+        "north": 51.549369,
+        "east": 0.004979
+      },
+      "centroid": {
+        "latitude": 51.5074,
+        "longitude": -0.1278
+      },
+      "confidence": "station_bounds",
+      "buffer_meters": 5000
+    },
+    "location_hint": "weur",
+    "reviewed_hosts": [
+      "api.tfl.gov.uk"
+    ],
+    "request_headers": {},
+    "preferred_languages": [
+      "en"
+    ],
+    "enabled": true
+  },
+
 ];
 
 export const BUNDLED_CATALOG: CatalogSnapshot = {

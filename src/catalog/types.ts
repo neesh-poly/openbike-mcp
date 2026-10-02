@@ -74,6 +74,7 @@ export const CatalogSystemSchema = z
     region: z.string().trim().max(300).nullable(),
     country_code: z.string().regex(/^[A-Z]{2}$/).nullable(),
     timezone: z.string().trim().min(1).max(128).nullable(),
+    feed_format: z.enum(["gbfs", "velib", "tfl"]).optional(),
     discovery_url: HttpsUrlSchema,
     detected_version: z.string().trim().min(1).max(32).nullable(),
     languages: z.array(z.string().trim().min(1).max(64)).max(64),

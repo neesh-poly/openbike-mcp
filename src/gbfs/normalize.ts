@@ -32,6 +32,7 @@ const SUPPORTED_FEEDS = new Set<GbfsDataFeedName>([
 ]);
 
 const KNOWN_UNUSED_FEEDS = new Set([
+  "gbfs",
   "gbfs_versions",
   "system_alerts",
   "system_calendar",
@@ -192,7 +193,7 @@ const documentRecord = (document: unknown): JsonRecord => {
 };
 
 const supportedVersion = (version: string): boolean =>
-  /^2\.(?:1|2|3)(?:\.\d+)?$/.test(version) || /^3(?:\.\d+)+$/.test(version);
+  /^1\.(?:0|1)(?:\.\d+)?$/.test(version) || /^2\.(?:1|2|3)(?:\.\d+)?$/.test(version) || /^3(?:\.\d+)+$/.test(version);
 
 const feedVersion = (
   document: JsonRecord,
@@ -360,7 +361,7 @@ export const normalizeSystemInformation = (
   feedVersion(root, context.detectedVersion);
   const data = dataRecord(root);
   const preferred = preferredLanguages(context);
-  const name = localizedText(data.name, preferred);
+  const name = optionalString(context.name) ?? localizedText(data.name, preferred);
   if (name === null) {
     throw new GbfsNormalizationError(
       "INVALID_DOCUMENT",
@@ -734,8 +735,11 @@ export const normalizeStationStatuses = (
           addCount(counts, category, count);
         }
       }
-    } else if (isRecord(item.num_bikes_available_types)) {
-      for (const [key, value] of Object.entries(item.num_bikes_available_types)) {
+    } else if (isRecord(item.num_bikes_available_types) || Array.isArray(item.num_bikes_available_types)) {
+      const entries = Array.isArray(item.num_bikes_available_types)
+        ? item.num_bikes_available_types.flatMap(entry => isRecord(entry) ? Object.entries(entry) : [])
+        : Object.entries(item.num_bikes_available_types);
+      for (const [key, value] of entries) {
         const count = nonnegativeInteger(value);
         if (count === null) {
           continue;
@@ -757,6 +761,20 @@ export const normalizeStationStatuses = (
         (total, count) => total + (count ?? 0),
         0,
       );
+    }
+    // GBFS 3 calls this total vehicles; never let scooters count as bicycles.
+    if (Array.isArray(item.vehicle_types_available) && item.vehicle_types_available.length > 0 &&
+        item.vehicle_types_available.every(entry => isRecord(entry) &&
+          nonnegativeInteger(entry.count) !== null &&
+          typeCategories.has(stableId(entry.vehicle_type_id, 256) ?? ""))) {
+      const bicycleCount = (counts.bike ?? 0) + (counts.ebike ?? 0) + (counts.cargo_bike ?? 0);
+      const knownTotal = Object.values(counts).reduce((total, count) => total + count, 0);
+      if (counts.bike !== undefined || counts.ebike !== undefined || counts.cargo_bike !== undefined || knownTotal === bikes) {
+        bikes = bicycleCount;
+      } else {
+        bikes = null;
+        ambiguousTypeCount += 1;
+      }
     }
     const docks = nonnegativeInteger(item.num_docks_available);
     const isRenting = booleanish(item.is_renting);
