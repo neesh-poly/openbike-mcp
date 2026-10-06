@@ -3,6 +3,7 @@ import type { SystemFeedAvailabilityResult } from "../durable/types";
 import { applyHttpRateLimit } from "./rate-limit";
 import { jsonResponse, methodNotAllowed } from "./responses";
 import { handleMapLive } from "./map-live";
+import { allowMapWork } from "./map-budget";
 
 const MAX_AGE_SECONDS = 180;
 const CACHE_SECONDS = 30;
@@ -60,6 +61,7 @@ export async function handleMapDocks(request: Request, env: Env, context: Execut
   const limited = await applyHttpRateLimit(request, env);
   if (limited) return new Response(limited.body, { status: limited.status, headers: { ...CORS, "retry-after": "60", "cache-control": "no-store" } });
   try {
+    if (!await allowMapWork(env)) throw new Error("Map work budget reached");
     const catalog = await loadCatalog(env);
     const system = catalog.systems.find(entry => entry.system_id === id && entry.enabled);
     if (!system) return jsonResponse({ error: "NOT_FOUND" }, { status: 404, headers: CORS });

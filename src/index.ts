@@ -5,6 +5,8 @@ import { MCP_ALLOWED_HOSTNAMES, MCP_ALLOWED_ORIGIN_HOSTNAMES, SERVICE_NAME, SERV
 import { SystemFeed } from "./durable";
 import { applyHttpRateLimit } from "./http/rate-limit";
 import { handleMapDocks } from "./http/map-docks";
+import { snapshotResponse } from "./http/map-live";
+import { allowMapWork } from "./http/map-budget";
 import { createRequestContext } from "./http/request-context";
 import {
   jsonResponse,
@@ -345,6 +347,17 @@ export default {
       );
     }
     return addRequestId(response, requestContext.requestId);
+  },
+
+  async scheduled(_controller: ScheduledController, env: Env, context: ExecutionContext): Promise<void> {
+    // Fixed catalog and bounded fan-out: visitor count never changes warmup work.
+    const systems = BUNDLED_CATALOG.systems.filter(system => system.enabled);
+    for (let i = 0; i < systems.length; i += 2) {
+      await Promise.all(systems.slice(i, i + 2).map(async system => {
+        const url = `${env.PUBLIC_BASE_URL}/map-docks/${system.system_id}/snapshot`;
+        await snapshotResponse(new Request(url), env, context, system.system_id, () => allowMapWork(env), true).catch(() => {});
+      }));
+    }
   },
 
   async queue(batch: MessageBatch<unknown>, env: Env): Promise<void> {

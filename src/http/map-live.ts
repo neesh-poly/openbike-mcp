@@ -1,10 +1,12 @@
 import { getSystemFeedStub, loadCatalog } from "../catalog";
 import type { SystemFeedAvailabilityResult } from "../durable/types";
 import { applyHttpRateLimit } from "./rate-limit";
+import { allowMapWork } from "./map-budget";
 import { jsonResponse } from "./responses";
 
 const CORS = { "access-control-allow-origin": "*" };
-const CACHE_SECONDS = 10;
+const CACHE_SECONDS = 15;
+const FALLBACK_SECONDS = 86_400;
 // GBFS allows up to five minutes of reporting latency. Retained readings are
 // explicitly shown as delayed by the client, never re-dated by a fresh fetch.
 const FRESH_SECONDS = 300;
@@ -45,88 +47,74 @@ export function liveMapSnapshot(snapshot: SystemFeedAvailabilityResult, now = Da
 
 type LiveSnapshot = ReturnType<typeof liveMapSnapshot>;
 
-async function snapshotResponse(request: Request, env: Env, context: ExecutionContext, id: string) {
-  const key = new Request(`${new URL(request.url).origin}/map-docks/${id}/snapshot`);
+const pending = new Map<string, Promise<Response>>();
+let catalog: { expires: number; value: Awaited<ReturnType<typeof loadCatalog>> } | undefined;
+async function currentCatalog(env: Env) {
+  if (!catalog || Date.now() > catalog.expires)
+    catalog = { value: await loadCatalog(env), expires: Date.now() + 60_000 };
+  return catalog.value;
+}
+
+function browserResponse(response: Response, state: string) {
+  const headers = new Headers(response.headers);
+  // Explicit client revalidation and independent shared-cache lifetime. The
+  // client's cache:no-store also avoids pre-existing four-hour browser entries.
+  headers.set("cache-control", "no-store");
+  headers.set("cdn-cache-control", `public, max-age=${CACHE_SECONDS}`);
+  headers.set("cloudflare-cdn-cache-control", `public, max-age=${CACHE_SECONDS}`);
+  headers.set("x-openbike-cache", state);
+  return new Response(response.body, { status: response.status, headers });
+}
+
+export async function snapshotResponse(request: Request, env: Env, context: ExecutionContext, id: string,
+  allowed: boolean | (() => Promise<boolean>) = true, waitForFresh = false) {
+  const key = new Request(`${new URL(request.url).origin}/map-docks/${id}/snapshot-v3`);
   const cached = await caches.default.match(key);
-  if (cached) return cached;
-  const system = (await loadCatalog(env)).systems.find(entry => entry.system_id === id && entry.enabled);
-  if (!system) throw new Error("Unknown system");
-  // The shared per-system object honors provider TTLs and coalesces refreshes,
-  // including requests from other visitors and the MCP. No per-viewer polling upstream.
-  const snapshot = await getSystemFeedStub(env, system).getAvailability({
-    catalogSystem: system, maxStalenessSeconds: RETAIN_SECONDS,
-  });
-  const response = jsonResponse(liveMapSnapshot(snapshot), { headers: {
-    ...CORS, "cache-control": `public, max-age=${CACHE_SECONDS}, s-maxage=${CACHE_SECONDS}`,
-  } });
-  context.waitUntil(caches.default.put(key, response.clone()));
-  return response;
-}
-
-function delay(ms: number, signal: AbortSignal) {
-  return new Promise<void>(resolve => {
-    const finish = () => { clearTimeout(timer); signal.removeEventListener("abort", finish); resolve(); };
-    const timer = setTimeout(finish, ms);
-    signal.addEventListener("abort", finish, { once: true });
-    if (signal.aborted) finish();
-  });
-}
-
-export function mapEventStream(read: () => Promise<LiveSnapshot>, signal: AbortSignal,
-  intervalMs = 10_000, lifetimeMs = 120_000) {
-  const stop = new AbortController();
-  const abort = () => stop.abort();
-  signal.addEventListener("abort", abort, { once: true });
-  if (signal.aborted) abort();
-  const encoder = new TextEncoder();
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      const run = async () => {
-        let last = "";
-        const until = Date.now() + lifetimeMs;
-        const send = (value: string) => {
-          if (stop.signal.aborted || (controller.desiredSize ?? 0) <= 0) return false;
-          controller.enqueue(encoder.encode(value));
-          return true;
-        };
-        try {
-          send("retry: 3000\n\n");
-          while (!stop.signal.aborted && Date.now() < until) {
-            try {
-              const snapshot = await read();
-              if (snapshot.fetched_at !== last) {
-                if (send(`event: snapshot\nid: ${snapshot.fetched_at}\ndata: ${JSON.stringify(snapshot)}\n\n`)) last = snapshot.fetched_at;
-              } else send(": heartbeat\n\n");
-            } catch { send('event: unavailable\ndata: {"retry":true}\n\n'); }
-            await delay(intervalMs, stop.signal);
-          }
-        } finally {
-          signal.removeEventListener("abort", abort);
-          try { controller.close(); } catch { /* The reader may have already cancelled. */ }
-        }
-      };
-      void run().catch(error => { try { controller.error(error); } catch { /* Already closed. */ } });
-    },
-    cancel() { stop.abort(); },
-  }, { highWaterMark: 2 });
+  const update = () => {
+    let task = pending.get(key.url);
+    if (!task) {
+      task = (async () => {
+        if (!(typeof allowed === "function" ? await allowed() : allowed)) throw new Error("Map work budget reached");
+        const system = (await currentCatalog(env)).systems.find(entry => entry.system_id === id && entry.enabled);
+        if (!system) throw new Error("Unknown system");
+        const snapshot = await getSystemFeedStub(env, system).getAvailability({
+          catalogSystem: system, maxStalenessSeconds: FALLBACK_SECONDS, staleWhileRevalidate: !waitForFresh,
+        });
+        const data = liveMapSnapshot(snapshot);
+        const remaining = Math.max(1, FALLBACK_SECONDS - Math.floor((Date.now() - Date.parse(data.fetched_at)) / 1000));
+        const response = jsonResponse(data, { headers: {
+          ...CORS, "cache-control": `public, max-age=${remaining}`,
+          "x-openbike-stored-at": String(Date.now()),
+        } });
+        await caches.default.put(key, response.clone());
+        return response;
+      })().finally(() => pending.delete(key.url));
+      pending.set(key.url, task);
+    }
+    return task.then(response => response.clone());
+  };
+  if (cached) {
+    const stale = Date.now() - Number(cached.headers.get("x-openbike-stored-at")) >= CACHE_SECONDS * 1000;
+    if (stale) context.waitUntil(update().catch(() => {}));
+    return browserResponse(cached, stale ? "STALE" : "HIT");
+  }
+  return browserResponse(await update(), "MISS");
 }
 
 export async function handleMapLive(request: Request, env: Env, context: ExecutionContext, id: string, events: boolean) {
+  // Retired public SSE route: 204 stops EventSource reconnects. Existing site
+  // versions already fall back to snapshots; new clients use bounded polling.
+  if (events) return new Response(null, { status: 204, headers: { ...CORS, "cache-control": "no-store" } });
   const limited = await applyHttpRateLimit(request, env);
   if (limited) return new Response(limited.body, { status: limited.status, headers: {
     ...CORS, "retry-after": "60", "cache-control": "no-store",
   } });
-  if (events) return new Response(request.method === "HEAD" ? null : mapEventStream(async () =>
-    await (await snapshotResponse(request, env, context, id)).json<LiveSnapshot>(), request.signal), { headers: {
-    ...CORS, "content-type": "text/event-stream", "cache-control": "no-store, no-transform",
-    "x-content-type-options": "nosniff",
-  } });
   try {
-    const response = await snapshotResponse(request, env, context, id);
+    const response = await snapshotResponse(request, env, context, id, () => allowMapWork(env));
     return request.method === "HEAD" ? new Response(null, { headers: response.headers }) : response;
   } catch {
     return jsonResponse({ error: "AVAILABILITY_UNAVAILABLE", system_id: id }, {
-      status: 503, headers: { ...CORS, "cache-control": "no-store", "retry-after": "10" },
+      status: 503, headers: { ...CORS, "cache-control": "no-store", "retry-after": "60" },
     });
   }
 }

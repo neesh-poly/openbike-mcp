@@ -108,6 +108,7 @@ describe("SystemFeed SQLite state", () => {
       { version: 2 },
       { version: 3 },
       { version: 4 },
+      { version: 5 },
     ]);
     expect(result.vehicleTypeTable).toEqual([{ name: "vehicle_type_rows" }]);
     expect(result.statusPublicationTable).toEqual([
@@ -159,6 +160,7 @@ describe("SystemFeed SQLite state", () => {
       { version: 2 },
       { version: 3 },
       { version: 4 },
+      { version: 5 },
     ]);
     expect(upgraded.vehicleTypeTable).toEqual([{ name: "vehicle_type_rows" }]);
     expect(upgraded.refreshOutcomesTable).toEqual([{ name: "refresh_outcomes" }]);
@@ -193,6 +195,97 @@ describe("SystemFeed SQLite state", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("stores a thousand-station refresh in bounded chunks and reads legacy data safely", async () => {
+    const source = BUNDLED_CATALOG.systems.find(system => system.system_id === "tfl_london")!;
+    const modified = new Date().toISOString();
+    const points = Array.from({ length: 1000 }, (_, i) => ({
+      id: `BikePoints_${i}`, commonName: `Station ${i}`, lat: 51.5, lon: -0.12,
+      additionalProperties: Object.entries({ Installed: "true", Locked: "false", NbBikes: "7",
+        NbDocks: "20", NbEmptyDocks: "11", NbStandardBikes: "4", NbEBikes: "3" })
+        .map(([key, value]) => ({ key, value, modified })),
+    }));
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(points)));
+    try {
+      const stub = env.SYSTEM_FEEDS.getByName(`cost-${crypto.randomUUID()}`) as unknown as DurableObjectStub<SystemFeed>;
+      await runInDurableObject(stub, instance => instance.getAvailability({ catalogSystem: source, forceRefresh: true }));
+      const result = await runInDurableObject(stub, async (instance, state) => {
+        let writes = 0;
+        const original = state.storage.sql;
+        Reflect.set(instance, 'sql', new Proxy(original, { get(target, key) {
+          if (key === 'exec') return (...args: Parameters<SqlStorage['exec']>) => {
+            const cursor = target.exec(...args); writes += cursor.rowsWritten; return cursor;
+          };
+          const value = Reflect.get(target, key); return typeof value === 'function' ? value.bind(target) : value;
+        } }));
+        try {
+          await instance.getAvailability({ catalogSystem: source, forceRefresh: true });
+          return { writes, station: await instance.getStation('BikePoints_999'),
+            chunks: original.exec<{ count: number }>('SELECT COUNT(*) AS count FROM snapshot_chunks').toArray()[0]!.count,
+            rows: original.exec<{ count: number }>('SELECT COUNT(*) AS count FROM station_rows').toArray()[0]!.count };
+        } finally { Reflect.set(instance, 'sql', original); }
+      });
+      expect(result.writes).toBeLessThan(200);
+      expect(result.chunks).toBeLessThan(20);
+      expect(result.rows).toBe(0);
+      expect(result.station?.station.station_id).toBe('BikePoints_999');
+      await evictDurableObject(stub);
+      expect((await runInDurableObject(stub, instance => instance.getAvailability({ catalogSystem: source }))).stations).toHaveLength(1000);
+      // Simulate a pre-migration station payload, then verify fallback reading.
+      await runInDurableObject(stub, async (instance, state) => {
+        const data = await instance.getAvailability({ catalogSystem: source });
+        state.storage.sql.exec("DELETE FROM snapshot_chunks WHERE slot = 'current'");
+        for (const row of data.stations) state.storage.sql.exec("INSERT INTO station_rows VALUES('current', ?, ?)", row.station_id, JSON.stringify(row));
+        for (const row of data.statuses) state.storage.sql.exec("INSERT INTO status_rows VALUES('current', ?, ?)", row.station_id, JSON.stringify(row));
+        for (const row of data.vehicleTypes) state.storage.sql.exec("INSERT INTO vehicle_type_rows VALUES('current', ?, ?)", row.vehicle_type_id, JSON.stringify(row));
+      });
+      await evictDurableObject(stub);
+      expect((await runInDurableObject(stub, instance => instance.getAvailability({ catalogSystem: source }))).stations).toHaveLength(1000);
+    } finally { vi.unstubAllGlobals(); }
+  });
+
+  it("returns a stale display snapshot before a pending provider refresh completes", async () => {
+    const source = BUNDLED_CATALOG.systems.find(system => system.system_id === "tfl_london")!;
+    const modified = new Date().toISOString();
+    const point = { id: "BikePoints_1", commonName: "One", lat: 51.5, lon: -0.12,
+      additionalProperties: Object.entries({ Installed: "true", Locked: "false", NbBikes: "7", NbDocks: "20", NbEmptyDocks: "11" })
+        .map(([key, value]) => ({ key, value, modified })) };
+    const fetchMock = vi.fn(async () => Response.json([point]));
+    vi.stubGlobal("fetch", fetchMock);
+    let finish: (() => void) | undefined;
+    try {
+      const stub = env.SYSTEM_FEEDS.getByName(`swr-${crypto.randomUUID()}`) as unknown as DurableObjectStub<SystemFeed>;
+      const original = await runInDurableObject(stub, instance => instance.getAvailability({ catalogSystem: source }));
+      await runInDurableObject(stub, async (instance, state) => {
+        state.storage.sql.exec("UPDATE snapshots SET expires_at_ms = 0 WHERE slot = 'current'");
+        fetchMock.mockImplementation(() => new Promise(resolve => { finish = () => resolve(Response.json([point])); }));
+        const cached = await instance.getAvailability({ catalogSystem: source, staleWhileRevalidate: true, maxStalenessSeconds: 900 });
+        expect(cached.fetched_at).toBe(original.fetched_at);
+        expect(cached.stale).toBe(true);
+        expect(cached.stations).toEqual(original.stations);
+        finish?.(); finish = undefined;
+        await Reflect.get(instance, 'refreshPromise');
+      });
+    } finally { finish?.(); vi.unstubAllGlobals(); }
+  });
+
+  it("enforces a shared daily and monthly map-work ceiling across eviction", async () => {
+    const stub = env.SYSTEM_FEEDS.getByName(`budget-${crypto.randomUUID()}`) as unknown as DurableObjectStub<SystemFeed>;
+    await runInDurableObject(stub, async (instance, state) => {
+      const now = new Date().toISOString();
+      state.storage.sql.exec('INSERT INTO map_budget VALUES(1, ?, ?, ?, ?)', now.slice(0,10), now.slice(0,7), 24_872, 24_872);
+      expect(await instance.claimMapBudget(128)).toBe(true);
+      expect(await instance.claimMapBudget(1)).toBe(false);
+    });
+    await evictDurableObject(stub);
+    expect(await runInDurableObject(stub, instance => instance.claimMapBudget(1))).toBe(false);
+    await runInDurableObject(stub, async (instance, state) => {
+      state.storage.sql.exec('UPDATE map_budget SET day = ?, monthly_count = 500000', '2000-01-01');
+      expect(await instance.claimMapBudget(1)).toBe(false);
+      state.storage.sql.exec('UPDATE map_budget SET month = ?', '2000-01');
+      expect(await instance.claimMapBudget(1)).toBe(true);
+    });
   });
 
   it("persists snapshots across eviction and coalesces concurrent refreshes", async () => {

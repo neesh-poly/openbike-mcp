@@ -29,7 +29,14 @@ See [docs/API.md](docs/API.md) for inputs, semantics, errors, and example MCP co
 
 `GET /map-docks/{systemId}/snapshot` returns version 2 station tuples: `[id, longitude, latitude, openSpaces, observedUnixSeconds]`. Zero means full or closed; null means unknown. Original station/provider/fetch clocks bound the observation time and never become newer merely because a client fetched again. Empty or unavailable inventories return an error rather than an all-full city. The legacy `/map-docks/{systemId}` contract remains available.
 
-`GET /map-docks/{systemId}/events` streams `snapshot` events when the shared observation changes, with ten-second heartbeat/check intervals. Provider requests remain coalesced in the existing system Durable Object and respect its feed TTL. Connections end after two minutes and EventSource reconnects; disconnects cancel timers and buffering is bounded. The website subscribes only after one city remains visible for three seconds, closes the stream when switching/hiding the page, and distinguishes delayed readings from confirmed full docks. Neither route changes the MCP tools' freshness contract.
+The website paints its first map directly from HTML and uses responsive static images. It polls only the visible city's snapshot every 15 seconds after a three-second dwell, pauses when hidden or idle for two minutes, backs off on errors, and retains known observations without changing their timestamps. `GET /map-docks/{systemId}/events` now returns 204 to stop legacy SSE reconnects. Neither change alters the MCP tools' freshness contract.
+
+Map snapshots use a shared 15-second revalidation interval and keep a last-known cache for up to 24 hours. An expired cache returns immediately while the Durable Object refreshes in the background. Production warms the 18 enabled systems every two minutes with concurrency two. Snapshot payloads are stored in bounded SQLite chunks, preserving the previous good version transactionally; old row-based snapshots are read and migrated on their next successful refresh.
+
+A persisted global allowance limits public map cache refresh work to 25,000 per UTC day and 500,000 per UTC month, including scheduled warming and the legacy map endpoint. Cache hits do not spend this allowance. Exhaustion serves retained cache where available or returns 503 with Retry-After. This is an application limit, **not an account billing cap**: incoming Worker requests, MCP traffic, and other account resources can still be billed. The Worker CPU limit is 2 seconds per invocation; production logs and traces sample 1%. No paid integration was added.
+
+**Rollback:** versions before the chunk-storage migration cannot read migrated station rows. Keep the chunk reader when reverting other changes, or roll forward with a fix; do not blindly roll the Worker back across this migration. Provider data can be refreshed again, but an old binary would not preserve the cached fallback.
+
 
 ## Architecture
 

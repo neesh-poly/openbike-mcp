@@ -46,7 +46,7 @@ describe('public map availability', () => {
     vi.stubGlobal('caches', { default: cache });
     const getAvailability = vi.fn(async () => snapshot());
     const env = { CATALOG_KV: { get: vi.fn(async () => null) },
-      SYSTEM_FEEDS: { getByName: vi.fn(() => ({ getAvailability })) },
+      SYSTEM_FEEDS: { getByName: vi.fn(() => ({ getAvailability, claimMapBudget: async () => true })) },
       EDGE_RATE_LIMITER: { limit: vi.fn(async () => ({ success: true })) } } as unknown as Env;
     const tasks: Promise<unknown>[] = [];
     const context = { waitUntil: (task: Promise<unknown>) => { tasks.push(task); } } as unknown as ExecutionContext;
@@ -70,7 +70,7 @@ describe('public map availability', () => {
     const put = vi.fn();
     vi.stubGlobal('caches', { default: { match: async () => undefined, put } });
     const env = { CATALOG_KV: { get: async () => null },
-      SYSTEM_FEEDS: { getByName: () => ({ getAvailability: async () => { throw new Error('provider payload'); } }) },
+      SYSTEM_FEEDS: { getByName: () => ({ claimMapBudget: async () => true, getAvailability: async () => { throw new Error('provider payload'); } }) },
       EDGE_RATE_LIMITER: { limit: async () => ({ success: true }) } } as unknown as Env;
     const response = await handleMapDocks(new Request('https://example.test/map-docks/lyft_nyc'), env, {} as ExecutionContext);
     expect(response.status).toBe(503);

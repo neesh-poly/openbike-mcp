@@ -68,6 +68,7 @@ export interface SystemFeedSnapshot {
 export interface AvailabilityQuery {
   catalogSystem?: CatalogSystem;
   forceRefresh?: boolean;
+  staleWhileRevalidate?: boolean;
   maxStalenessSeconds?: number;
 }
 

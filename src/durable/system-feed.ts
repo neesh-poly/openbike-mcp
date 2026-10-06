@@ -202,11 +202,26 @@ const MIGRATION_FOUR = [
   "CREATE INDEX IF NOT EXISTS refresh_outcomes_completed_idx ON refresh_outcomes(completed_at_ms)",
 ] as const;
 
+const MIGRATION_FIVE = [
+  `CREATE TABLE IF NOT EXISTS snapshot_chunks (
+    slot TEXT NOT NULL CHECK (slot IN ('current', 'last_good')),
+    chunk_index INTEGER NOT NULL,
+    payload_json TEXT NOT NULL,
+    PRIMARY KEY (slot, chunk_index)
+  )`,
+  `CREATE TABLE IF NOT EXISTS map_budget (
+    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+    day TEXT NOT NULL, month TEXT NOT NULL,
+    daily_count INTEGER NOT NULL, monthly_count INTEGER NOT NULL
+  )`,
+] as const;
+
 const MIGRATIONS = [
   { version: 1, statements: MIGRATION_ONE },
   { version: 2, statements: MIGRATION_TWO },
   { version: 3, statements: MIGRATION_THREE },
   { version: 4, statements: MIGRATION_FOUR },
+  { version: 5, statements: MIGRATION_FIVE },
 ] as const;
 
 const asIso = (milliseconds: number | null): string | null =>
@@ -446,21 +461,25 @@ export class SystemFeed extends DurableObject<Env> {
       .toArray()[0];
     if (row === undefined) return null;
     const metadata = JSON.parse(row.metadata_json) as PersistedSnapshotMetadata;
-    const stations = this.sql
+    const chunks = this.sql.exec<{ payload_json: string }>(
+      "SELECT payload_json FROM snapshot_chunks WHERE slot = ? ORDER BY chunk_index", slot,
+    ).toArray();
+    const packed = chunks.length ? JSON.parse(chunks.map(chunk => chunk.payload_json).join("")) as Pick<SystemFeedSnapshot, "stations" | "statuses" | "vehicleTypes"> : null;
+    const stations = packed?.stations ?? this.sql
       .exec<{ payload_json: string }>(
         "SELECT payload_json FROM station_rows WHERE slot = ? ORDER BY station_id",
         slot,
       )
       .toArray()
       .map((record) => JSON.parse(record.payload_json));
-    const statuses = this.sql
+    const statuses = packed?.statuses ?? this.sql
       .exec<{ payload_json: string }>(
         "SELECT payload_json FROM status_rows WHERE slot = ? ORDER BY station_id",
         slot,
       )
       .toArray()
       .map((record) => JSON.parse(record.payload_json));
-    const vehicleTypes = this.sql
+    const vehicleTypes = packed?.vehicleTypes ?? this.sql
       .exec<{ payload_json: string }>(
         `SELECT payload_json FROM vehicle_type_rows
          WHERE slot = ? ORDER BY vehicle_type_id`,
@@ -619,75 +638,31 @@ export class SystemFeed extends DurableObject<Env> {
       system: snapshot.system,
       warnings: snapshot.warnings,
     };
+    // Preserve an existing row-wise snapshot during the first post-upgrade write.
+    // Subsequent refreshes copy a handful of bounded chunks, not every station.
+    const previous = this.readSnapshot("current");
     this.ctx.storage.transactionSync(() => {
-      this.sql.exec("DELETE FROM station_rows WHERE slot = 'last_good'");
-      this.sql.exec("DELETE FROM status_rows WHERE slot = 'last_good'");
-      this.sql.exec("DELETE FROM vehicle_type_rows WHERE slot = 'last_good'");
+      if (previous) this.writeSnapshotChunks("last_good", previous.snapshot);
       this.sql.exec("DELETE FROM snapshots WHERE slot = 'last_good'");
       this.sql.exec(
-        `INSERT INTO snapshots(
-          slot, schema_version, metadata_json, fetched_at_ms, expires_at_ms,
-          content_hash, station_count, status_count
-        ) SELECT 'last_good', schema_version, metadata_json, fetched_at_ms,
-          expires_at_ms, content_hash, station_count, status_count
+        `INSERT INTO snapshots SELECT 'last_good', schema_version, metadata_json,
+          fetched_at_ms, expires_at_ms, content_hash, station_count, status_count
           FROM snapshots WHERE slot = 'current'`,
       );
-      this.sql.exec(
-        `INSERT INTO station_rows(slot, station_id, payload_json)
-         SELECT 'last_good', station_id, payload_json
-         FROM station_rows WHERE slot = 'current'`,
-      );
-      this.sql.exec(
-        `INSERT INTO status_rows(slot, station_id, payload_json)
-         SELECT 'last_good', station_id, payload_json
-         FROM status_rows WHERE slot = 'current'`,
-      );
-      this.sql.exec(
-        `INSERT INTO vehicle_type_rows(slot, vehicle_type_id, payload_json)
-         SELECT 'last_good', vehicle_type_id, payload_json
-         FROM vehicle_type_rows WHERE slot = 'current'`,
-      );
-      this.sql.exec("DELETE FROM station_rows WHERE slot = 'current'");
-      this.sql.exec("DELETE FROM status_rows WHERE slot = 'current'");
-      this.sql.exec("DELETE FROM vehicle_type_rows WHERE slot = 'current'");
       this.sql.exec("DELETE FROM snapshots WHERE slot = 'current'");
       this.sql.exec(
-        `INSERT INTO snapshots(
-          slot, schema_version, metadata_json, fetched_at_ms, expires_at_ms,
-          content_hash, station_count, status_count
-        ) VALUES('current', ?, ?, ?, ?, ?, ?, ?)`,
-        SNAPSHOT_SCHEMA_VERSION,
-        stableJson(metadata),
-        fetchedAtMs,
-        expiresAtMs,
-        contentHash,
-        snapshot.stations.length,
-        snapshot.statuses.length,
+        `INSERT INTO snapshots(slot, schema_version, metadata_json, fetched_at_ms,
+          expires_at_ms, content_hash, station_count, status_count)
+         VALUES('current', ?, ?, ?, ?, ?, ?, ?)`,
+        SNAPSHOT_SCHEMA_VERSION, stableJson(metadata), fetchedAtMs, expiresAtMs,
+        contentHash, snapshot.stations.length, snapshot.statuses.length,
       );
-      for (const station of snapshot.stations) {
-        this.sql.exec(
-          `INSERT INTO station_rows(slot, station_id, payload_json)
-           VALUES('current', ?, ?)`,
-          station.station_id,
-          JSON.stringify(station),
-        );
-      }
-      for (const status of snapshot.statuses) {
-        this.sql.exec(
-          `INSERT INTO status_rows(slot, station_id, payload_json)
-           VALUES('current', ?, ?)`,
-          status.station_id,
-          JSON.stringify(status),
-        );
-      }
-      for (const vehicleType of snapshot.vehicleTypes) {
-        this.sql.exec(
-          `INSERT INTO vehicle_type_rows(slot, vehicle_type_id, payload_json)
-           VALUES('current', ?, ?)`,
-          vehicleType.vehicle_type_id,
-          JSON.stringify(vehicleType),
-        );
-      }
+      this.writeSnapshotChunks("current", snapshot);
+      // Old storage is removed only after both replacement snapshots are written,
+      // in the same transaction. Legacy reads remain supported until then.
+      this.sql.exec("DELETE FROM station_rows");
+      this.sql.exec("DELETE FROM status_rows");
+      this.sql.exec("DELETE FROM vehicle_type_rows");
       this.persistFeedState(bundle.state);
       this.persistObservations(bundle.observations, fetchedAtMs);
       this.persistRefreshOutcome(true, fetchedAtMs);
@@ -700,6 +675,36 @@ export class SystemFeed extends DurableObject<Env> {
       expiresAtMs,
       contentHash,
     };
+  }
+
+  private writeSnapshotChunks(slot: "current" | "last_good", snapshot: SystemFeedSnapshot): void {
+    const payload = JSON.stringify({ stations: snapshot.stations, statuses: snapshot.statuses,
+      vehicleTypes: snapshot.vehicleTypes });
+    this.sql.exec("DELETE FROM snapshot_chunks WHERE slot = ?", slot);
+    for (let offset = 0, index = 0; offset < payload.length;
+      offset += FEED_CACHE_CHUNK_CHARACTERS, index++) {
+      this.sql.exec("INSERT INTO snapshot_chunks VALUES(?, ?, ?)", slot, index,
+        payload.slice(offset, offset + FEED_CACHE_CHUNK_CHARACTERS));
+    }
+  }
+
+  // One global counter lends small request batches to Worker isolates. Limits
+  // bound expensive map work across regions, not merely per IP or per server.
+  async claimMapBudget(amount: number): Promise<boolean> {
+    if (!Number.isInteger(amount) || amount < 1 || amount > 128) return false;
+    const stamp = new Date().toISOString();
+    const day = stamp.slice(0, 10), month = stamp.slice(0, 7);
+    return this.ctx.storage.transactionSync(() => {
+      const previous = this.sql.exec<{ day: string; month: string; daily_count: number; monthly_count: number }>(
+        "SELECT * FROM map_budget WHERE singleton = 1",
+      ).toArray()[0];
+      const daily = previous?.day === day ? previous.daily_count : 0;
+      const monthly = previous?.month === month ? previous.monthly_count : 0;
+      if (daily + amount > 25_000 || monthly + amount > 500_000) return false;
+      this.sql.exec(`INSERT OR REPLACE INTO map_budget VALUES(1, ?, ?, ?, ?)`,
+        day, month, daily + amount, monthly + amount);
+      return true;
+    });
   }
 
   private markRefreshFailure(error: unknown, nowMs: number): ProviderErrorClass {
@@ -898,6 +903,11 @@ export class SystemFeed extends DurableObject<Env> {
         false,
       );
     }
+    if (query.staleWhileRevalidate && query.forceRefresh !== true && current &&
+        nowMs - current.fetchedAtMs <= maxStalenessSeconds * 1000) {
+      this.ctx.waitUntil(this.refresh(system).catch(() => {}));
+      return this.availabilityResult(current, nowMs, maxStalenessSeconds, true);
+    }
     try {
       const refreshed = await this.refresh(system);
       return this.availabilityResult(
@@ -924,32 +934,11 @@ export class SystemFeed extends DurableObject<Env> {
   ): Promise<SystemFeedStationResult | null> {
     const current = this.readSnapshot("current");
     if (current === null) return null;
-    const row = this.sql
-      .exec<{ payload_json: string }>(
-        `SELECT payload_json FROM station_rows
-         WHERE slot = 'current' AND station_id = ?`,
-        stationId,
-      )
-      .toArray()[0];
-    if (row === undefined) return null;
-    const station = JSON.parse(row.payload_json);
-    const statusRow = includeStatus
-      ? this.sql
-          .exec<{ payload_json: string }>(
-            `SELECT payload_json FROM status_rows
-             WHERE slot = 'current' AND station_id = ?`,
-            stationId,
-          )
-          .toArray()[0]
-      : undefined;
-    return {
-      station,
-      ...(statusRow === undefined
-        ? {}
-        : { status: JSON.parse(statusRow.payload_json) }),
-      fetched_at: new Date(current.fetchedAtMs).toISOString(),
-      stale: Date.now() > current.expiresAtMs,
-    };
+    const station = current.snapshot.stations.find(row => row.station_id === stationId);
+    if (!station) return null;
+    const status = includeStatus ? current.snapshot.statuses.find(row => row.station_id === stationId) : undefined;
+    return { station, ...(status ? { status } : {}),
+      fetched_at: new Date(current.fetchedAtMs).toISOString(), stale: Date.now() > current.expiresAtMs };
   }
 
   async getHealth(catalogSystem?: CatalogSystem): Promise<SystemFeedHealth> {

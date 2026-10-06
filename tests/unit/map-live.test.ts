@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { liveMapSnapshot, mapEventStream } from '../../src/http/map-live';
+import { liveMapSnapshot, snapshotResponse } from '../../src/http/map-live';
 import { handleMapDocks } from '../../src/http/map-docks';
 import type { SystemFeedAvailabilityResult } from '../../src/durable/types';
 
@@ -43,57 +43,75 @@ describe('live map snapshots',()=>{
   expect(()=>liveMapSnapshot({...fixture(),stations:[]},now)).toThrow();
  });
 });
-describe('visible-city event stream',()=>{
- it('pushes changed snapshots, heartbeats unchanged data, and stops when cancelled',async()=>{
-  vi.useFakeTimers();vi.setSystemTime(now);
-  const snapshot=liveMapSnapshot(fixture(),now);
-  const read=vi.fn().mockResolvedValue(snapshot);
-  const reader=mapEventStream(read,new AbortController().signal,10,100).getReader();
-  const text=async()=>new TextDecoder().decode((await reader.read()).value);
-  expect(await text()).toContain('retry: 3000');
-  expect(await text()).toContain('event: snapshot');
-  await vi.advanceTimersByTimeAsync(10);
-  expect(await text()).toContain('heartbeat');
-  read.mockResolvedValue({...snapshot,fetched_at:stamp(1)});
-  await vi.advanceTimersByTimeAsync(10);
-  expect(await text()).toContain('id: '+stamp(1));
-  await reader.cancel();
-  const count=read.mock.calls.length;
-  await vi.advanceTimersByTimeAsync(100);
-  expect(read).toHaveBeenCalledTimes(count);
-  expect(vi.getTimerCount()).toBe(0);
- });
- it('reports upstream failure without replacing the map with empty data',async()=>{
-  vi.useFakeTimers();vi.setSystemTime(now);
-  const read=vi.fn().mockRejectedValue(new Error('private upstream detail'));
-  const abort=new AbortController();
-  const reader=mapEventStream(read,abort.signal,10,100).getReader();
-  await reader.read();
-  const message=new TextDecoder().decode((await reader.read()).value);
-  expect(message).toContain('event: unavailable');
-  expect(message).not.toContain('private');
-  abort.abort();
-  expect((await reader.read()).done).toBe(true);
-  expect(vi.getTimerCount()).toBe(0);
- });
- it('routes snapshot and event requests, shares snapshots, and rejects unknown cities',async()=>{
-  vi.useFakeTimers();vi.setSystemTime(now);
-  const storage=new Map<string,Response>();
-  vi.stubGlobal('caches',{default:{match:async(r:Request)=>storage.get(r.url)?.clone(),put:async(r:Request,v:Response)=>{storage.set(r.url,v);}}});
-  const getAvailability=vi.fn(async()=>fixture());
-  const env={CATALOG_KV:{get:async()=>null},SYSTEM_FEEDS:{getByName:()=>({getAvailability})},EDGE_RATE_LIMITER:{limit:async()=>({success:true})}} as unknown as Env;
-  const tasks:Promise<unknown>[]=[];
-  const ctx={waitUntil:(p:Promise<unknown>)=>tasks.push(p)} as unknown as ExecutionContext;
-  const response=await handleMapDocks(new Request('https://test.local/map-docks/lyft_nyc/snapshot'),env,ctx);
+describe('cached map delivery', () => {
+ function setup(allowed = true) {
+  vi.useFakeTimers(); vi.setSystemTime(now);
+  const storage = new Map<string, Response>();
+  vi.stubGlobal('caches', { default: {
+   match: async (r: Request) => storage.get(r.url)?.clone(),
+   put: async (r: Request, v: Response) => { storage.set(r.url, v); },
+  } });
+  const getAvailability = vi.fn(async () => fixture());
+  const claimMapBudget = vi.fn(async () => allowed);
+  const env = { CATALOG_KV: { get: async () => null },
+   SYSTEM_FEEDS: { getByName: () => ({ getAvailability, claimMapBudget }) },
+   EDGE_RATE_LIMITER: { limit: async () => ({ success: true }) } } as unknown as Env;
+  const tasks: Promise<unknown>[] = [];
+  const ctx = { waitUntil: (task: Promise<unknown>) => tasks.push(task) } as unknown as ExecutionContext;
+  const request = new Request('https://test.local/map-docks/lyft_nyc/snapshot');
+  return { env, ctx, request, getAvailability, claimMapBudget, tasks, storage };
+ }
+ it('uses shared cached snapshots while forcing browser revalidation', async () => {
+  const s = setup();
+  const response = await handleMapDocks(s.request, s.env, s.ctx);
   expect(response.status).toBe(200);
-  expect(response.headers.get('cache-control')).toContain('max-age=10');
-  expect((await response.json() as {version:number}).version).toBe(2);
-  await Promise.all(tasks);
-  const stream=await handleMapDocks(new Request('https://test.local/map-docks/lyft_nyc/events'),env,ctx);
-  expect(stream.headers.get('content-type')).toBe('text/event-stream');
-  expect(stream.headers.get('access-control-allow-origin')).toBe('*');
-  const reader=stream.body!.getReader();await reader.read();await reader.read();await reader.cancel();
-  expect(getAvailability).toHaveBeenCalledTimes(1);
-  expect((await handleMapDocks(new Request('https://test.local/map-docks/nope/events'),env,ctx)).status).toBe(404);
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(response.headers.get('cdn-cache-control')).toContain('max-age=15');
+  expect((await response.json() as { version: number }).version).toBe(2);
+  await handleMapDocks(s.request, s.env, s.ctx);
+  expect(s.getAvailability).toHaveBeenCalledTimes(1);
+  expect(s.claimMapBudget).toHaveBeenCalledTimes(1);
+  expect(s.getAvailability).toHaveBeenCalledWith(expect.objectContaining({ staleWhileRevalidate: true }));
+ });
+ it('returns a stale cached response without waiting for a blocked provider', async () => {
+  const s = setup();
+  await handleMapDocks(s.request, s.env, s.ctx);
+  vi.setSystemTime(now + 16_000);
+  let resolve!: (value: SystemFeedAvailabilityResult) => void;
+  s.getAvailability.mockImplementation(() => new Promise(done => { resolve = done; }));
+  const response = await handleMapDocks(s.request, s.env, s.ctx);
+  expect(response.headers.get('x-openbike-cache')).toBe('STALE');
+  expect((await response.json() as { fetched_at: string }).fetched_at).toBe(stamp(-5));
+  resolve(fixture()); await Promise.all(s.tasks);
+ });
+ it('coalesces a concurrent cold cache miss', async () => {
+  const s = setup();
+  await Promise.all(Array.from({ length: 20 }, () => handleMapDocks(s.request, s.env, s.ctx)));
+  expect(s.getAvailability).toHaveBeenCalledTimes(1);
+  expect(s.claimMapBudget).toHaveBeenCalledTimes(1);
+ });
+ it('charges only cache refresh work and lets scheduled warming wait for fresh data', async () => {
+  const s = setup();
+  const allow = vi.fn(async () => true);
+  await snapshotResponse(s.request, s.env, s.ctx, 'lyft_nyc', allow, true);
+  await snapshotResponse(s.request, s.env, s.ctx, 'lyft_nyc', allow, true);
+  expect(allow).toHaveBeenCalledTimes(1);
+  expect(s.getAvailability).toHaveBeenCalledWith(expect.objectContaining({ staleWhileRevalidate: false }));
+ });
+ it('denies new backend work at the shared budget while preserving cached responses', async () => {
+  const s = setup(false);
+  expect((await handleMapDocks(s.request, s.env, s.ctx)).status).toBe(503);
+  expect(s.getAvailability).not.toHaveBeenCalled();
+  const key = new Request('https://test.local/map-docks/lyft_nyc/snapshot-v3');
+  s.storage.set(key.url, Response.json(liveMapSnapshot(fixture(), now), { headers: { 'x-openbike-stored-at': String(now - 60_000) } }));
+  expect((await snapshotResponse(s.request, s.env, s.ctx, 'lyft_nyc', false)).status).toBe(200);
+  await Promise.all(s.tasks);
+  expect(s.getAvailability).not.toHaveBeenCalled();
+ });
+ it('retires long-lived streams without reconnecting and still rejects unknown cities', async () => {
+  const s = setup();
+  expect((await handleMapDocks(new Request('https://test.local/map-docks/lyft_nyc/events'), s.env, s.ctx)).status).toBe(204);
+  expect((await handleMapDocks(new Request('https://test.local/map-docks/nope/events'), s.env, s.ctx)).status).toBe(404);
+  expect(s.getAvailability).not.toHaveBeenCalled();
  });
 });
