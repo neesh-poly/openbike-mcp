@@ -74,11 +74,12 @@ export async function snapshotResponse(request: Request, env: Env, context: Exec
     let task = pending.get(key.url);
     if (!task) {
       task = (async () => {
-        if (!(typeof allowed === "function" ? await allowed() : allowed)) throw new Error("Map work budget reached");
+        const canRefresh = typeof allowed === "function" ? await allowed() : allowed;
         const system = (await currentCatalog(env)).systems.find(entry => entry.system_id === id && entry.enabled);
         if (!system) throw new Error("Unknown system");
         const snapshot = await getSystemFeedStub(env, system).getAvailability({
           catalogSystem: system, maxStalenessSeconds: FALLBACK_SECONDS, staleWhileRevalidate: !waitForFresh,
+          cacheOnly: !canRefresh,
         });
         const data = liveMapSnapshot(snapshot);
         const remaining = Math.max(1, FALLBACK_SECONDS - Math.floor((Date.now() - Date.parse(data.fetched_at)) / 1000));

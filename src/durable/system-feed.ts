@@ -700,7 +700,10 @@ export class SystemFeed extends DurableObject<Env> {
       ).toArray()[0];
       const daily = previous?.day === day ? previous.daily_count : 0;
       const monthly = previous?.month === month ? previous.monthly_count : 0;
-      if (daily + amount > 25_000 || monthly + amount > 500_000) return false;
+      if (daily + amount > 25_000 || monthly + amount > 500_000) {
+        console.warn(JSON.stringify({ event: "map_budget_exhausted", daily_count: daily, monthly_count: monthly }));
+        return false;
+      }
       this.sql.exec(`INSERT OR REPLACE INTO map_budget VALUES(1, ?, ?, ?, ?)`,
         day, month, daily + amount, monthly + amount);
       return true;
@@ -891,6 +894,11 @@ export class SystemFeed extends DurableObject<Env> {
       ),
     );
     const current = this.readSnapshot("current");
+    if (query.cacheOnly) {
+      const retained = current ?? this.readSnapshot("last_good");
+      if (!retained) throw new Error("No retained station snapshot");
+      return this.availabilityResult(retained, nowMs, maxStalenessSeconds, nowMs > retained.expiresAtMs);
+    }
     if (
       query.forceRefresh !== true &&
       current !== null &&

@@ -179,6 +179,10 @@ describe("SystemFeed SQLite state", () => {
     vi.stubGlobal("fetch", fetchMock);
     try {
       const stub = env.SYSTEM_FEEDS.getByName(`tfl-${crypto.randomUUID()}`) as unknown as DurableObjectStub<SystemFeed>;
+      await expect(runInDurableObject(stub, instance => instance.getAvailability({
+        catalogSystem: source, cacheOnly: true, forceRefresh: true,
+      }))).rejects.toThrow("No retained station snapshot");
+      expect(fetchMock).not.toHaveBeenCalled();
       const first = await runInDurableObject(stub, instance => instance.getAvailability({
         catalogSystem: source, forceRefresh: true,
       }));
@@ -192,6 +196,15 @@ describe("SystemFeed SQLite state", () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
       const health = await runInDurableObject(stub, instance => instance.getHealth());
       expect(health.feeds.map(feed => feed.feed_name)).toEqual(["station_information", "station_status"]);
+      const retained = await runInDurableObject(stub, async (instance, state) => {
+        state.storage.sql.exec("UPDATE snapshots SET expires_at_ms = 0 WHERE slot = 'current'");
+        return instance.getAvailability({ catalogSystem: source, cacheOnly: true,
+          forceRefresh: true, staleWhileRevalidate: true });
+      });
+      expect(retained.stale).toBe(true);
+      expect(retained.fetched_at).toBe(first.fetched_at);
+      expect(retained.statuses).toEqual(first.statuses);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     } finally {
       vi.unstubAllGlobals();
     }

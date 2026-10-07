@@ -67,6 +67,8 @@ export interface SystemFeedSnapshot {
 
 export interface AvailabilityQuery {
   catalogSystem?: CatalogSystem;
+  /** Read retained storage only; never initiate or schedule a provider request. */
+  cacheOnly?: boolean;
   forceRefresh?: boolean;
   staleWhileRevalidate?: boolean;
   maxStalenessSeconds?: number;

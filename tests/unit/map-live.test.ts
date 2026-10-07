@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { liveMapSnapshot, snapshotResponse } from '../../src/http/map-live';
 import { handleMapDocks } from '../../src/http/map-docks';
+import { allowMapWork } from '../../src/http/map-budget';
 import type { SystemFeedAvailabilityResult } from '../../src/durable/types';
 
 const now = Date.parse('2026-10-02T12:00:00Z');
@@ -51,7 +52,7 @@ describe('cached map delivery', () => {
    match: async (r: Request) => storage.get(r.url)?.clone(),
    put: async (r: Request, v: Response) => { storage.set(r.url, v); },
   } });
-  const getAvailability = vi.fn(async () => fixture());
+  const getAvailability = vi.fn(async (_query?: unknown) => fixture());
   const claimMapBudget = vi.fn(async () => allowed);
   const env = { CATALOG_KV: { get: async () => null },
    SYSTEM_FEEDS: { getByName: () => ({ getAvailability, claimMapBudget }) },
@@ -100,13 +101,27 @@ describe('cached map delivery', () => {
  });
  it('denies new backend work at the shared budget while preserving cached responses', async () => {
   const s = setup(false);
+  s.getAvailability.mockRejectedValue(new Error('No retained station snapshot'));
   expect((await handleMapDocks(s.request, s.env, s.ctx)).status).toBe(503);
-  expect(s.getAvailability).not.toHaveBeenCalled();
+  expect(s.getAvailability).toHaveBeenCalledWith(expect.objectContaining({cacheOnly:true}));
   const key = new Request('https://test.local/map-docks/lyft_nyc/snapshot-v3');
   s.storage.set(key.url, Response.json(liveMapSnapshot(fixture(), now), { headers: { 'x-openbike-stored-at': String(now - 60_000) } }));
   expect((await snapshotResponse(s.request, s.env, s.ctx, 'lyft_nyc', false)).status).toBe(200);
   await Promise.all(s.tasks);
-  expect(s.getAvailability).not.toHaveBeenCalled();
+  expect(s.getAvailability.mock.calls.every(([query]) => (query as {cacheOnly:boolean}).cacheOnly)).toBe(true);
+ });
+ it('can publish a retained Durable Object snapshot with no new provider work at the limit', async () => {
+  const s = setup(false);
+  const response = await handleMapDocks(s.request, s.env, s.ctx);
+  expect(response.status).toBe(200);
+  expect(s.getAvailability).toHaveBeenCalledWith(expect.objectContaining({cacheOnly:true}));
+  expect((await response.json() as {fetched_at:string}).fetched_at).toBe(stamp(-5));
+ });
+ it('reserves exactly one unit for each concurrent operation without prepaid losses', async () => {
+  const s = setup();
+  expect(await Promise.all(Array.from({length:5}, () => allowMapWork(s.env)))).toEqual([true,true,true,true,true]);
+  expect(s.claimMapBudget).toHaveBeenCalledTimes(5);
+  expect(s.claimMapBudget.mock.calls).toEqual([[1],[1],[1],[1],[1]]);
  });
  it('retires long-lived streams without reconnecting and still rejects unknown cities', async () => {
   const s = setup();
