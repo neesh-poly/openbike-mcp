@@ -10,7 +10,9 @@
 - `velib`: a pure document adapter supplies the operator-documented 1.0 version when omitted and maps `lastUpdatedOther` to the envelope clock. It never changes a station's `last_reported` value. Original responses remain in cache, including on 304 revalidation.
 - `tfl`: one BikePoint response provides station geometry and status. Explicit `NbEmptyDocks` supplies return spaces, not capacity minus bikes. Strict parsing preserves unknown counts and maps installed/locked flags. Source property timestamps remain attached to station status.
 
-All formats use `FeedTransport` and the existing bounded JSON fetcher: exact reviewed hosts, redirect validation, no credentials, byte/depth/time limits, conditional requests, and payload-free errors. Source URLs and observations identify the actual endpoint. TfL's two logical feeds share one HTTP response; no fictitious GBFS discovery fetch is reported.
+- `gira`: one tenant-filtered, read-only Firestore query supplies Lisbon GIRA stations. Explicit `FreeDocks` and `ServiceStatus` drive returns; unknown statuses stay unknown. Server `readTime` describes a database snapshot, while `updateTime` is only the last change. No rider login, API key, Firebase SDK, or individual bike records are used.
+
+All formats use `FeedTransport` and the existing bounded JSON fetcher: exact reviewed hosts, redirect validation, no credentials, byte/depth/time limits, conditional requests, and payload-free errors. Source URLs and observations identify the actual endpoint. GIRA's fixed POST query rejects redirects and is subject to the same response limits. TfL's two logical feeds share one HTTP response; no fictitious GBFS discovery fetch is reported.
 
 The Durable Object, SQLite storage, freshness evaluation, ranking, and MCP handlers are shared. Adding a provider must not require city-specific branches in those layers.
 

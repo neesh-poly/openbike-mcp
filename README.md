@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/neesh-poly/openbike-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/neesh-poly/openbike-mcp/actions/workflows/ci.yml)
 
-An open-source, read-only Model Context Protocol server for live bikeshare discovery and station availability. It normalizes General Bikeshare Feed Specification (GBFS 1.x–3.x) feeds and TfL BikePoint data so agents can answer questions such as “Can I return a bike near here?” with distance, operational state, and explicit freshness.
+An open-source, read-only Model Context Protocol server for live bikeshare discovery and station availability. It normalizes General Bikeshare Feed Specification (GBFS 1.x–3.x) feeds, TfL BikePoint, and GIRA station data so agents can answer questions such as “Can I return a bike near here?” with distance, operational state, and explicit freshness.
 
-OpenBike runs on Cloudflare with **18 enabled cities**: New York City, Vancouver, Oslo, Vienna, San Francisco, Boston, Chicago, Washington, DC, Toronto, Montréal, Austin, Berlin, Madrid, Barcelona, Tokyo, Philadelphia, Los Angeles, London. Paris and Portland have adapters and reviewed configuration but remain disabled while their station timestamps fail the live freshness gate. The catalog also retains other public feeds as disabled candidates; inclusion in that index does not imply active coverage.
+OpenBike runs on Cloudflare with **19 enabled cities**: New York City, Vancouver, Oslo, Vienna, San Francisco, Boston, Chicago, Washington, DC, Toronto, Montréal, Austin, Berlin, Madrid, Barcelona, Tokyo, Philadelphia, Los Angeles, London, Lisbon. Paris and Portland have adapters and reviewed configuration but remain disabled while their station timestamps fail the live freshness gate. The catalog also retains other public feeds as disabled candidates; inclusion in that index does not imply active coverage.
 
 - MCP endpoint: `https://mcp.openbike.neesh.page/mcp`
 - Service health: `https://mcp.openbike.neesh.page/healthz`
@@ -31,7 +31,7 @@ See [docs/API.md](docs/API.md) for inputs, semantics, errors, and example MCP co
 
 The website paints its first map directly from HTML and uses responsive static images. It polls only the visible city's snapshot every 15 seconds after a three-second dwell, pauses when hidden or idle for two minutes, backs off on errors, and retains known observations without changing their timestamps. `GET /map-docks/{systemId}/events` now returns 204 to stop legacy SSE reconnects. Neither change alters the MCP tools' freshness contract.
 
-Map snapshots use a shared 15-second revalidation interval and keep a last-known cache for up to 24 hours. An expired cache returns immediately while the Durable Object refreshes in the background. Production warms the 18 enabled systems every two minutes with concurrency two. Snapshot payloads are stored in bounded SQLite chunks, preserving the previous good version transactionally; old row-based snapshots are read and migrated on their next successful refresh.
+Map snapshots use a shared 15-second revalidation interval and keep a last-known cache for up to 24 hours. An expired cache returns immediately while the Durable Object refreshes in the background. Production warms the 19 enabled systems every two minutes with concurrency two. Snapshot payloads are stored in bounded SQLite chunks, preserving the previous good version transactionally; old row-based snapshots are read and migrated on their next successful refresh.
 
 A persisted global allowance limits public map cache refresh work to 25,000 per UTC day and 500,000 per UTC month, including scheduled warming and the legacy map endpoint. Cache hits do not spend this allowance. Exhaustion serves retained cache where available or returns 503 with Retry-After. This is an application limit, **not an account billing cap**: incoming Worker requests, MCP traffic, and other account resources can still be billed. The Worker CPU limit is 2 seconds per invocation; production logs and traces sample 1%. No paid integration was added.
 

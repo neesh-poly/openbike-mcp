@@ -594,6 +594,7 @@ export class OpenBikeMcpService {
           availability: {
             ...item.status.availability,
             confidence: determineAvailabilityConfidence({
+              sourceConfidence: item.status.availability.confidence,
               hasUsableStatus: true,
               relevantCountKnown: relevantCount !== null,
               operationalFlagsKnown:

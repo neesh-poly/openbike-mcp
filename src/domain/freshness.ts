@@ -75,6 +75,7 @@ export interface ConfidenceInput {
   operationalFlagsKnown: boolean;
   freshness: FreshnessEvaluation;
   semanticsAmbiguous?: boolean;
+  sourceConfidence?: AvailabilityConfidence;
 }
 
 export const determineAvailabilityConfidence = ({
@@ -83,18 +84,19 @@ export const determineAvailabilityConfidence = ({
   operationalFlagsKnown,
   freshness,
   semanticsAmbiguous = false,
+  sourceConfidence = "high",
 }: ConfidenceInput): AvailabilityConfidence => {
   if (
-    !hasUsableStatus ||
+    !hasUsableStatus || sourceConfidence === "unavailable" ||
     !relevantCountKnown ||
     !freshness.within_max_staleness
   ) {
     return "unavailable";
   }
-  if (freshness.freshness.is_stale || semanticsAmbiguous) {
+  if (freshness.freshness.is_stale || semanticsAmbiguous || sourceConfidence === "low") {
     return "low";
   }
-  if (!operationalFlagsKnown || !freshness.source_timestamp_present) {
+  if (!operationalFlagsKnown || !freshness.source_timestamp_present || sourceConfidence === "medium") {
     return "medium";
   }
   return "high";

@@ -2,6 +2,7 @@ import { GbfsClient } from "../gbfs/client";
 import type { GbfsClientOptions, GbfsSystemSource } from "../gbfs/types";
 import { adaptVelibDocument } from "./velib";
 import { TflClient } from "./tfl";
+import { GiraClient } from "./gira";
 
 /** A small format boundary; caching, storage, search, and MCP stay provider-agnostic. */
 export const createStationFeedClient = (
@@ -15,6 +16,8 @@ export const createStationFeedClient = (
       return new GbfsClient(source, { ...options, adaptDocument: adaptVelibDocument });
     case "tfl":
       return new TflClient(source, options);
+    case "gira":
+      return new GiraClient(source, options);
     default:
       throw new Error("Unsupported station feed format");
   }

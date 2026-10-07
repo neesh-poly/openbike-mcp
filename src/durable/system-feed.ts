@@ -979,7 +979,7 @@ export class SystemFeed extends DurableObject<Env> {
     const rollingSuccesses = rolling.successes ?? 0;
     const rollingFailures = rolling.failures ?? 0;
     const rollingTotal = rollingSuccesses + rollingFailures;
-    const discoveredFeeds = new Set<string>(system?.feed_format === "tfl" ? [] : ["gbfs"]);
+    const discoveredFeeds = new Set<string>(["tfl", "gira"].includes(system?.feed_format ?? "") ? [] : ["gbfs"]);
     if (current !== null) {
       for (const feedName of Object.keys(current.snapshot.discovery.feeds)) {
         discoveredFeeds.add(feedName);

@@ -53,12 +53,14 @@ export class FeedTransport {
     feedName: GbfsFetchFeedName,
     url: string,
     previous: CachedGbfsDocument | undefined,
+    jsonQuery?: unknown,
   ): Promise<LoadedDocument> {
     return withGbfsFeedError(feedName, async () => {
       const mayReusePrevious = previous?.url === undefined || previous.url === url;
       const conditional = mayReusePrevious ? previous?.metadata : undefined;
       const fetchOptions: FetchBoundedJsonOptions = {
         policy: this.policy,
+        ...(jsonQuery === undefined ? {} : { jsonQuery }),
         ...(this.options.fetcher === undefined
           ? {}
           : { fetcher: this.options.fetcher }),

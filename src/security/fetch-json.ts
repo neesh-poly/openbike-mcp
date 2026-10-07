@@ -25,6 +25,8 @@ export type FetchLike = (
 
 export interface FetchBoundedJsonOptions {
   policy: ReviewedHostPolicy;
+  /** For reviewed read-only query APIs that require POST. Redirects are disabled. */
+  jsonQuery?: unknown;
   fetcher?: FetchLike;
   conditional?: ConditionalRequestMetadata;
   maxBytes?: number;
@@ -365,24 +367,28 @@ export const fetchBoundedJson = async (
   };
 
   let current = validateOutboundUrl(input, options.policy);
-  let conditional = options.conditional;
+  const queryBody = options.jsonQuery === undefined ? undefined : JSON.stringify(options.jsonQuery);
+  let conditional = queryBody === undefined ? options.conditional : undefined;
 
   for (let redirectCount = 0; ; redirectCount += 1) {
+    const headers = makeHeaders(current.headers, conditional);
+    if (queryBody !== undefined) headers.set("content-type", "application/json");
     const response = await fetchWithDeadline(
       fetcher,
       current.url,
       {
-        method: "GET",
+        method: queryBody === undefined ? "GET" : "POST",
+        ...(queryBody === undefined ? {} : { body: queryBody }),
         redirect: "manual",
         // Workers has no ambient browser cookie jar. Credential-bearing headers
         // and URL user-info are rejected by the reviewed-host policy.
-        headers: makeHeaders(current.headers, conditional),
+        headers,
       },
       remainingTimeout(),
     );
 
     if (redirectStatuses.has(response.status)) {
-      if (redirectCount >= maxRedirects) {
+      if (queryBody !== undefined || redirectCount >= maxRedirects) {
         await response.body?.cancel();
         throw new OutboundRequestError(
           "TOO_MANY_REDIRECTS",

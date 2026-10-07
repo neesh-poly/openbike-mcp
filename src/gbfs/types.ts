@@ -26,7 +26,7 @@ export type GbfsDataFeedName =
 
 export type GbfsFetchFeedName = "gbfs" | GbfsDataFeedName;
 
-export type FeedFormat = "gbfs" | "velib" | "tfl";
+export type FeedFormat = "gbfs" | "velib" | "tfl" | "gira";
 
 export interface GbfsSystemSource {
   format?: FeedFormat;

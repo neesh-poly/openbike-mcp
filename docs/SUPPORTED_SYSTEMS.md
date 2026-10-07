@@ -1,6 +1,6 @@
 # Supported systems and catalog admission
 
-OpenBike enables the 18 reviewed systems below. Its September 2, 2026 launch catalog contained 1,524 systems: four enabled reviewed systems and 1,520 disabled candidates. The daily Workflow stages eligible rows from MobilityData's canonical `systems.csv` as **disabled candidates** when `MOBILITYDATA_CATALOG_MODE=candidates`. Candidate indexing is not a claim of live or worldwide coverage: candidates are not probed, returned by MCP tools, or matched to coordinates until an operator explicitly promotes them.
+OpenBike enables the 19 reviewed systems below. Its September 2, 2026 launch catalog contained 1,524 systems: four enabled reviewed systems and 1,520 disabled candidates. The daily Workflow stages eligible rows from MobilityData's canonical `systems.csv` as **disabled candidates** when `MOBILITYDATA_CATALOG_MODE=candidates`. Candidate indexing is not a claim of live or worldwide coverage: candidates are not probed, returned by MCP tools, or matched to coordinates until an operator explicitly promotes them.
 
 | City | System ID | Network | Format |
 |---|---|---|---|
@@ -22,6 +22,7 @@ OpenBike enables the 18 reviewed systems below. Its September 2, 2026 launch cat
 | Philadelphia | `bcycle_indego` | Indego | 1.1 |
 | Los Angeles | `bcycle_lametro` | Metro Bike Share | 1.1 |
 | London | `tfl_london` | Santander Cycles | TfL-BikePoint |
+| Lisbon | `gira_lisbon` | GIRA (EMEL) | GIRA-Firestore |
 
 Paris (`paris`, Vélib GBFS 1.0) and Portland (`biketown_pdx`, BIKETOWN GBFS 2.3) are configured but disabled: their station clocks failed the October 2 freshness checks. Seattle remains pending a usable bicycle feed and dockless query support. See [current expansion evidence](operations/2026-10-global-expansion.md).
 
@@ -88,3 +89,5 @@ Keeping coverage unknown is valid for explicit ID, country, or text discovery, b
 ## Adding a system
 
 Follow [CONTRIBUTING.md](../CONTRIBUTING.md). New active entries need a reviewed HTTPS discovery URL/hostname, data-policy evidence, representative minimized fixtures, adapter coverage, a safe location hint, and station bounds or an explicit `unknown` coverage label.
+
+Lisbon uses the public VAIMOO station collection identified by [Gira+](https://github.com/rt-evil-inc/gira-mais). It exposes explicit free docks and service state. Freshness is the server database read time, not a station telemetry heartbeat; the response carries `SOURCE_TIMESTAMP_MISSING` and medium confidence. Bike-type counts and a feed-specific data license remain unknown. See [Lisbon validation](operations/2026-10-lisbon.md).

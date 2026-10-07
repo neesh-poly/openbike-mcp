@@ -1,6 +1,6 @@
 import type { CatalogSnapshot, CatalogSystem } from "./types";
 
-export const BUNDLED_CATALOG_VERSION = "bundled-2026-10-02-expanded";
+export const BUNDLED_CATALOG_VERSION = "bundled-2026-10-07-lisbon";
 
 const DEFAULT_CAPABILITIES = {
   docked: true,
@@ -941,12 +941,40 @@ export const BUNDLED_CATALOG_SYSTEMS: readonly CatalogSystem[] = [
     "enabled": true
   },
 
+  {
+    system_id: "gira_lisbon",
+    source_system_id: "gira_lisbon",
+    name: "GIRA",
+    operator: "EMEL",
+    city: "Lisbon",
+    region: "Lisboa",
+    country_code: "PT",
+    timezone: "Europe/Lisbon",
+    feed_format: "gira",
+    discovery_url: "https://firestore.googleapis.com/v1/projects/vaimoorotterdam/databases/(default)/documents:runQuery",
+    detected_version: "GIRA-Firestore",
+    languages: ["pt"],
+    license: { id: null, name: null, url: null, status: "unknown" },
+    capabilities: { docked: true, dockless: false, ebike: true, station_status: true },
+    coverage: {
+      bounds: { south: 38.6935, west: -9.22658, north: 38.79301, east: -9.09235 },
+      centroid: { latitude: 38.7369, longitude: -9.1427 },
+      confidence: "station_bounds",
+      buffer_meters: 5000,
+    },
+    location_hint: "weur",
+    reviewed_hosts: ["firestore.googleapis.com"],
+    request_headers: {},
+    preferred_languages: ["pt"],
+    enabled: true,
+  },
+
 ];
 
 export const BUNDLED_CATALOG: CatalogSnapshot = {
   schema_version: 1,
   version: BUNDLED_CATALOG_VERSION,
-  generated_at: "2026-10-02T00:00:00.000Z",
+  generated_at: "2026-10-07T00:00:00.000Z",
   source_url:
     "https://raw.githubusercontent.com/MobilityData/gbfs/master/systems.csv",
   source_etag: null,

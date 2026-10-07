@@ -21,7 +21,7 @@ const expandedCatalog = (count: number, version: string): CatalogSnapshot => ({
 });
 
 describe("catalog validation and lookup", () => {
-  it("ships twenty validated reviewed systems", () => {
+  it("ships twenty-one validated reviewed systems", () => {
     const catalog = validateCatalogSnapshot(BUNDLED_CATALOG);
     expect(catalog.systems.map((system) => system.system_id)).toEqual([
       "lyft_nyc",
@@ -44,6 +44,7 @@ describe("catalog validation and lookup", () => {
       "bcycle_lametro",
       "paris",
       "tfl_london",
+      "gira_lisbon",
     ]);
     expect(getCatalogSystem(catalog, "Mobibikes_CA_Vancouver")?.system_id).toBe(
       "mobibikes_ca_vancouver",
